@@ -66,7 +66,7 @@ interface MapViewProps {
 
 export default function MapView({ points, activePointId, userLocation, onPointClick }: MapViewProps) {
   const { t } = useLanguage()
-  const center: [number, number] = userLocation ?? [55.7558, 37.6173]
+  const center: [number, number] = userLocation ?? [42.8746, 74.5698]
 
   return (
     <MapContainer

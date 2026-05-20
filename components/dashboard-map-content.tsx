@@ -38,16 +38,16 @@ const TYPE_EMOJI: Record<WasteType, string> = {
 const ALL_TYPES: WasteType[] = ['plastic', 'paper', 'glass', 'metal', 'electronics', 'organic']
 
 const MOCK_POINTS: DropoffPoint[] = [
-  { id: '1', name: 'ЭкоПункт Тверская', address: 'Тверская ул., 5', lat: 55.7600, lng: 37.6173, types: ['plastic', 'paper', 'glass'], hours: '09:00–21:00', pointsPerKg: 30 },
-  { id: '2', name: 'Сбор отходов Арбат', address: 'Старый Арбат, 22', lat: 55.7517, lng: 37.5926, types: ['plastic', 'metal', 'electronics'], hours: '10:00–20:00', pointsPerKg: 40 },
-  { id: '3', name: 'Зелёная точка Хамовники', address: 'Пречистенка, 10', lat: 55.7445, lng: 37.6001, types: ['paper', 'glass', 'organic'], hours: '08:00–22:00', pointsPerKg: 25 },
-  { id: '4', name: 'ЭкоБокс Замоскворечье', address: 'Б. Ордынка, 15', lat: 55.7373, lng: 37.6271, types: ['plastic', 'glass', 'metal'], hours: '24/7', pointsPerKg: 35 },
-  { id: '5', name: 'Пункт приёма ВДНХ', address: 'пр-т Мира, 119', lat: 55.8309, lng: 37.6355, types: ['electronics', 'metal'], hours: '10:00–19:00', pointsPerKg: 50 },
-  { id: '6', name: 'ЭкоПункт Коломенское', address: 'Коломенская ул., 8', lat: 55.6694, lng: 37.6668, types: ['organic', 'paper', 'plastic'], hours: '09:00–20:00', pointsPerKg: 28 },
-  { id: '7', name: 'Сортировочный центр Сокол', address: 'Балтийская ул., 3', lat: 55.8038, lng: 37.5152, types: ['plastic', 'paper', 'glass', 'metal', 'electronics'], hours: '08:00–22:00', pointsPerKg: 45 },
-  { id: '8', name: 'Приёмный пункт Выхино', address: 'Выхинская ул., 30', lat: 55.7256, lng: 37.8621, types: ['plastic', 'paper'], hours: '09:00–21:00', pointsPerKg: 30 },
-  { id: '9', name: 'ЭкоПункт Медведково', address: 'Полярная ул., 12', lat: 55.8740, lng: 37.6500, types: ['glass', 'metal', 'organic'], hours: '10:00–20:00', pointsPerKg: 32 },
-  { id: '10', name: 'Раздельный сбор Бибирево', address: 'Бибиревская ул., 6', lat: 55.8788, lng: 37.5987, types: ['plastic', 'paper', 'glass'], hours: '08:00–22:00', pointsPerKg: 30 },
+  { id: '1', name: 'ЭкоПункт Центр', address: 'бул. Эркиндик, 12, Бишкек', lat: 42.8746, lng: 74.5940, types: ['plastic', 'paper', 'glass'], hours: '09:00–21:00', pointsPerKg: 30 },
+  { id: '2', name: 'Пункт приёма Аламедин', address: 'ул. Аламединская, 45, Бишкек', lat: 42.8731, lng: 74.6190, types: ['plastic', 'metal', 'electronics'], hours: '10:00–20:00', pointsPerKg: 40 },
+  { id: '3', name: 'Зелёная точка Ортосай', address: 'ул. Ибраимова, 22, Бишкек', lat: 42.8990, lng: 74.6090, types: ['paper', 'glass', 'organic'], hours: '08:00–22:00', pointsPerKg: 25 },
+  { id: '4', name: 'ЭкоБокс Джал', address: 'мкр. Джал, 20, Бишкек', lat: 42.8340, lng: 74.5720, types: ['plastic', 'glass', 'metal'], hours: '24/7', pointsPerKg: 35 },
+  { id: '5', name: 'Сортировочный центр Асанбай', address: 'мкр. Асанбай, 8, Бишкек', lat: 42.8390, lng: 74.6080, types: ['plastic', 'paper', 'glass', 'metal', 'electronics'], hours: '08:00–20:00', pointsPerKg: 45 },
+  { id: '6', name: 'Приёмный пункт Токмок', address: 'ул. Советская, 14, Токмок', lat: 42.8350, lng: 75.2930, types: ['plastic', 'paper'], hours: '09:00–18:00', pointsPerKg: 28 },
+  { id: '7', name: 'ЭкоПункт Кант', address: 'ул. Ленина, 5, Кант', lat: 42.8890, lng: 74.8500, types: ['glass', 'metal', 'organic'], hours: '10:00–19:00', pointsPerKg: 32 },
+  { id: '8', name: 'Пункт приёма Ош', address: 'пр. Масалиева, 30, Ош', lat: 40.5144, lng: 72.8160, types: ['plastic', 'paper', 'glass', 'metal'], hours: '09:00–20:00', pointsPerKg: 30 },
+  { id: '9', name: 'ЭкоЦентр Ош-Базар', address: 'ул. Курманжан Датки, 7, Ош', lat: 40.5282, lng: 72.7994, types: ['electronics', 'metal', 'plastic'], hours: '08:00–21:00', pointsPerKg: 38 },
+  { id: '10', name: 'Пункт приёма Каракол', address: 'ул. Токтогула, 18, Каракол', lat: 42.4900, lng: 78.3900, types: ['plastic', 'paper', 'organic'], hours: '09:00–18:00', pointsPerKg: 27 },
 ]
 
 function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
