@@ -165,13 +165,14 @@ export function DashboardContent({ user, pointsBalance }: DashboardContentProps)
                 <p className="text-muted-foreground">{t('dropoff-count')}</p>
               </div>
             </div>
-            <Button
-              type="button"
-              className="bg-foreground font-semibold text-background hover:bg-foreground/90"
-              onClick={() => comingSoon('Карта пунктов')}
-            >
-              {t('open-map')}
-            </Button>
+            <Link href="/dashboard/map">
+              <Button
+                type="button"
+                className="bg-foreground font-semibold text-background hover:bg-foreground/90"
+              >
+                {t('open-map')}
+              </Button>
+            </Link>
           </div>
         </div>
       </main>

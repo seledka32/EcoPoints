@@ -151,3 +151,17 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Leaflet dark mode */
+.dark .leaflet-tile {
+  filter: brightness(0.55) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+}
+.dark .leaflet-container {
+  background: #1a1a1a;
+}
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

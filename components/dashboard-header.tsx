@@ -11,7 +11,7 @@ import { useLanguage } from '@/hooks/use-language'
 
 type DashboardHeaderProps = {
   user: { email?: string | null }
-  variant?: 'main' | 'qr' | 'rewards'
+  variant?: 'main' | 'qr' | 'rewards' | 'map'
 }
 
 export function DashboardHeader({ user, variant = 'main' }: DashboardHeaderProps) {
@@ -27,7 +27,7 @@ export function DashboardHeader({ user, variant = 'main' }: DashboardHeaderProps
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-4 sm:px-6 lg:px-8">
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
-          {variant === 'qr' || variant === 'rewards' ? (
+          {variant !== 'main' ? (
             <Link href="/dashboard">
               <Button
                 variant="ghost"
