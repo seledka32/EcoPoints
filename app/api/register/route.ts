@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { hash } from 'bcryptjs'
 
-import getMongoClientPromise from '@/lib/mongodb'
+import getMongoClientPromise from '@/lib/server/mongodb'
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)

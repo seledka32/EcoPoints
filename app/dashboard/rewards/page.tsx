@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
-import { getAuthOptions } from '@/lib/auth'
-import { getPointsBalance } from '@/lib/points'
+import { getAuthOptions } from '@/lib/server/auth'
+import { getPointsBalance } from '@/lib/server/points'
 import { DashboardRewardsContent } from '@/components/dashboard-rewards-content'
 
 export const dynamic = 'force-dynamic'

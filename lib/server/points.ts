@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb'
 
-import getMongoClientPromise from '@/lib/mongodb'
+import getMongoClientPromise from '@/lib/server/mongodb'
 
 export async function getPointsBalance(userId: string): Promise<number> {
   try {
