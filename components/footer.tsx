@@ -1,11 +1,16 @@
+'use client'
+
 import Link from "next/link"
 import { Leaf } from "lucide-react"
+import { useLanguage } from "@/hooks/use-language"
 
 export function Footer() {
+  const { t } = useLanguage()
+
   return (
     <footer className="relative py-20 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/30 via-background to-background" />
-      
+
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12">
           <div className="col-span-2 md:col-span-1">
@@ -18,47 +23,47 @@ export function Footer() {
               </span>
             </Link>
             <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
-              Платформа, которая делает переработку отходов выгодной для всех.
+              {t('footer-desc')}
             </p>
           </div>
 
           <div>
-            <h4 className="font-semibold text-foreground mb-4">Платформа</h4>
+            <h4 className="font-semibold text-foreground mb-4">{t('footer-col-platform')}</h4>
             <ul className="space-y-3 text-sm">
-              <li><Link href="/#how-it-works" className="text-muted-foreground hover:text-emerald-400 transition-colors">Как это работает</Link></li>
-              <li><Link href="/dashboard" className="text-muted-foreground hover:text-emerald-400 transition-colors">Личный кабинет</Link></li>
-              <li><Link href="/#partners" className="text-muted-foreground hover:text-emerald-400 transition-colors">Партнёры</Link></li>
-              <li><Link href="/dashboard" className="text-muted-foreground hover:text-emerald-400 transition-colors">Бонусы</Link></li>
+              <li><Link href="/#how-it-works" className="text-muted-foreground hover:text-emerald-400 transition-colors">{t('footer-link-hiw')}</Link></li>
+              <li><Link href="/dashboard" className="text-muted-foreground hover:text-emerald-400 transition-colors">{t('footer-link-dashboard')}</Link></li>
+              <li><Link href="/#partners" className="text-muted-foreground hover:text-emerald-400 transition-colors">{t('footer-link-partners')}</Link></li>
+              <li><Link href="/dashboard" className="text-muted-foreground hover:text-emerald-400 transition-colors">{t('footer-link-bonuses')}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-semibold text-foreground mb-4">Аккаунт</h4>
+            <h4 className="font-semibold text-foreground mb-4">{t('footer-col-account')}</h4>
             <ul className="space-y-3 text-sm">
-              <li><Link href="/auth/login" className="text-muted-foreground hover:text-emerald-400 transition-colors">Вход</Link></li>
-              <li><Link href="/auth/sign-up" className="text-muted-foreground hover:text-emerald-400 transition-colors">Регистрация</Link></li>
-              <li><Link href="/dashboard/qr" className="text-muted-foreground hover:text-emerald-400 transition-colors">QR-код</Link></li>
-              <li><Link href="/#faq" className="text-muted-foreground hover:text-emerald-400 transition-colors">Контакты</Link></li>
+              <li><Link href="/auth/login" className="text-muted-foreground hover:text-emerald-400 transition-colors">{t('footer-link-login')}</Link></li>
+              <li><Link href="/auth/sign-up" className="text-muted-foreground hover:text-emerald-400 transition-colors">{t('footer-link-signup')}</Link></li>
+              <li><Link href="/dashboard/qr" className="text-muted-foreground hover:text-emerald-400 transition-colors">{t('footer-link-qr')}</Link></li>
+              <li><Link href="/#faq" className="text-muted-foreground hover:text-emerald-400 transition-colors">{t('footer-link-contact')}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-semibold text-foreground mb-4">Поддержка</h4>
+            <h4 className="font-semibold text-foreground mb-4">{t('footer-col-support')}</h4>
             <ul className="space-y-3 text-sm">
-              <li><Link href="/#faq" className="text-muted-foreground hover:text-emerald-400 transition-colors">FAQ</Link></li>
-              <li><Link href="mailto:support@ecopoints.ru" className="text-muted-foreground hover:text-emerald-400 transition-colors">Написать нам</Link></li>
-              <li><span className="text-muted-foreground/70">Политика — скоро</span></li>
-              <li><span className="text-muted-foreground/70">Условия — скоро</span></li>
+              <li><Link href="/#faq" className="text-muted-foreground hover:text-emerald-400 transition-colors">{t('footer-link-faq')}</Link></li>
+              <li><Link href="mailto:support@ecopoints.ru" className="text-muted-foreground hover:text-emerald-400 transition-colors">{t('footer-link-write')}</Link></li>
+              <li><span className="text-muted-foreground/70">{t('footer-coming-soon')}</span></li>
+              <li><span className="text-muted-foreground/70">{t('footer-coming-soon')}</span></li>
             </ul>
           </div>
         </div>
 
         <div className="mt-16 pt-8 border-t border-border/50 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">
-            © 2026 EcoPoints. Все права защищены.
+            {t('footer-copyright')}
           </p>
           <div className="flex items-center gap-6">
-            <span className="text-sm text-muted-foreground/70">Соцсети — скоро</span>
+            <span className="text-sm text-muted-foreground/70">{t('footer-social-soon')}</span>
           </div>
         </div>
       </div>
