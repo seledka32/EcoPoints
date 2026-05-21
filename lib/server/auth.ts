@@ -28,6 +28,7 @@ export function getAuthOptions(): NextAuthOptions {
             _id: unknown
             email: string
             passwordHash?: string
+            role?: string
           }>({ email })
 
           if (!user?.passwordHash) return null
@@ -38,6 +39,7 @@ export function getAuthOptions(): NextAuthOptions {
           return {
             id: String(user._id),
             email: user.email,
+            role: user.role ?? 'user',
           }
         },
       }),
@@ -52,12 +54,14 @@ export function getAuthOptions(): NextAuthOptions {
     callbacks: {
       async jwt({ token, user }) {
         if (user?.id) token.sub = user.id
+        if (user?.role) token.role = user.role
         return token
       },
       async session({ session, token }) {
         if (session.user && token.sub) {
           session.user.id = token.sub
         }
+        session.user.role = (token.role as string | undefined) ?? 'user'
         return session
       },
     },

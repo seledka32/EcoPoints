@@ -7,25 +7,40 @@ import { DashboardHeader } from '@/components/dashboard-header'
 import { Gift, Recycle, MapPin, Trophy, TrendingUp, Star } from 'lucide-react'
 import { useLanguage } from '@/hooks/use-language'
 
-interface DashboardContentProps {
-  user: { email?: string | null }
-  pointsBalance: number
+interface TxItem {
+  id: string
+  amount: number
+  type: string
+  description: string
+  createdAt: Date | string
 }
 
-export function DashboardContent({ user, pointsBalance }: DashboardContentProps) {
+interface DashboardContentProps {
+  user: { email?: string | null; role?: string }
+  pointsBalance: number
+  transactions?: TxItem[]
+}
+
+function formatRelativeDate(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  const now = Date.now()
+  const diff = now - d.getTime()
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  if (minutes < 60) return `${minutes} мин. назад`
+  if (hours < 24) return `${hours} ч. назад`
+  if (days === 1) return 'Вчера'
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+}
+
+export function DashboardContent({ user, pointsBalance, transactions = [] }: DashboardContentProps) {
   const { t } = useLanguage()
 
   const stats = [
     { labelKey: 'points-label', value: pointsBalance.toLocaleString('ru-RU'), icon: Star, color: 'from-yellow-400 to-orange-400' },
     { labelKey: 'kg-recycled', value: '48.5', icon: Recycle, color: 'from-emerald-400 to-cyan-400' },
     { labelKey: 'rewards-count', value: '12', icon: Trophy, color: 'from-purple-400 to-pink-400' },
-  ]
-
-  const recentActivity = [
-    { type: 'recycle', descKey: 'act-plastic', points: '+150', timeKey: 'time-2h' },
-    { type: 'reward', descKey: 'act-discount-cafe', points: '-500', timeKey: 'time-yesterday' },
-    { type: 'recycle', descKey: 'act-paper', points: '+90', timeKey: 'time-3d' },
-    { type: 'bonus', descKey: 'act-bonus', points: '+100', timeKey: 'time-week' },
   ]
 
   const availableRewards = [
@@ -79,43 +94,46 @@ export function DashboardContent({ user, pointsBalance }: DashboardContentProps)
           <div className="rounded-2xl border border-border bg-card p-6">
             <h2 className="mb-6 text-xl font-bold text-foreground">{t('recent-activity')}</h2>
             <div className="space-y-4">
-              {recentActivity.map((activity, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between border-b border-border/50 py-3 last:border-0"
-                >
-                  <div className="flex items-center gap-4">
+              {transactions.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">Активности пока нет</p>
+              ) : (
+                transactions.map((tx) => {
+                  const isPositive = tx.amount >= 0
+                  const iconClass =
+                    tx.type === 'recycle'
+                      ? 'bg-emerald-500/20'
+                      : tx.type === 'reward'
+                        ? 'bg-purple-500/20'
+                        : 'bg-yellow-500/20'
+                  const Icon =
+                    tx.type === 'recycle' ? Recycle : tx.type === 'reward' ? Gift : Star
+                  const iconColor =
+                    tx.type === 'recycle'
+                      ? 'text-emerald-500'
+                      : tx.type === 'reward'
+                        ? 'text-purple-500'
+                        : 'text-yellow-500'
+                  return (
                     <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                        activity.type === 'recycle'
-                          ? 'bg-emerald-500/20'
-                          : activity.type === 'reward'
-                            ? 'bg-purple-500/20'
-                            : 'bg-yellow-500/20'
-                      }`}
+                      key={tx.id}
+                      className="flex items-center justify-between border-b border-border/50 py-3 last:border-0"
                     >
-                      {activity.type === 'recycle' ? (
-                        <Recycle className="h-5 w-5 text-emerald-500" />
-                      ) : activity.type === 'reward' ? (
-                        <Gift className="h-5 w-5 text-purple-500" />
-                      ) : (
-                        <Star className="h-5 w-5 text-yellow-500" />
-                      )}
+                      <div className="flex items-center gap-4">
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconClass}`}>
+                          <Icon className={`h-5 w-5 ${iconColor}`} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{tx.description}</p>
+                          <p className="text-xs text-muted-foreground">{formatRelativeDate(tx.createdAt)}</p>
+                        </div>
+                      </div>
+                      <span className={`font-semibold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {isPositive ? '+' : ''}{tx.amount}
+                      </span>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{t(activity.descKey)}</p>
-                      <p className="text-xs text-muted-foreground">{t(activity.timeKey)}</p>
-                    </div>
-                  </div>
-                  <span
-                    className={`font-semibold ${
-                      activity.points.startsWith('+') ? 'text-emerald-500' : 'text-red-500'
-                    }`}
-                  >
-                    {activity.points}
-                  </span>
-                </div>
-              ))}
+                  )
+                })
+              )}
             </div>
           </div>
 

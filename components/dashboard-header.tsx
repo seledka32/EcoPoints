@@ -3,14 +3,14 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
-import { ArrowLeft, Leaf, LogOut, QrCode } from 'lucide-react'
+import { ArrowLeft, Leaf, LogOut, QrCode, ShieldCheck } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { ThemeLanguageSwitcher } from '@/components/theme-language-switcher'
 import { useLanguage } from '@/hooks/use-language'
 
 type DashboardHeaderProps = {
-  user: { email?: string | null }
+  user: { email?: string | null; role?: string }
   variant?: 'main' | 'qr' | 'rewards' | 'map'
 }
 
@@ -52,7 +52,18 @@ export function DashboardHeader({ user, variant = 'main' }: DashboardHeaderProps
           <span className="hidden max-w-[200px] truncate text-sm text-muted-foreground md:inline">
             {user.email}
           </span>
-          {variant === 'main' ? (
+          {variant === 'main' && (user.role === 'admin' || user.role === 'operator') ? (
+            <Link href="/admin">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-emerald-500/40 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-500/10"
+              >
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Админ панель</span>
+              </Button>
+            </Link>
+          ) : variant === 'main' ? (
             <Link href="/dashboard/qr">
               <Button
                 variant="outline"

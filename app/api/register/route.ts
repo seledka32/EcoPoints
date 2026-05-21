@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { hash } from 'bcryptjs'
 
 import getMongoClientPromise from '@/lib/server/mongodb'
+import { addPoints } from '@/lib/server/transactions'
+import { generateUniqueShortCode } from '@/lib/server/short-code'
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -39,16 +41,21 @@ export async function POST(req: Request) {
 
     const passwordHash = await hash(password, 10)
 
+    const shortCode = await generateUniqueShortCode(db)
+
     const insertRes = await db.collection('users').insertOne({
       email,
       passwordHash,
+      role: 'user',
+      shortCode,
       createdAt: new Date(),
     })
 
-    await db.collection('points').insertOne({
+    await addPoints({
       userId: insertRes.insertedId,
-      balance: 100,
-      updatedAt: new Date(),
+      amount: 100,
+      type: 'bonus',
+      description: 'Приветственный бонус',
     })
 
     return NextResponse.json({ ok: true }, { status: 201 })
