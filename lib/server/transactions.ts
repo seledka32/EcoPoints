@@ -63,3 +63,23 @@ export async function getTransactions(userId: string, limit = 20): Promise<Trans
     .limit(limit)
     .toArray()
 }
+
+export interface RedeemedReward {
+  _id: ObjectId
+  userId: ObjectId
+  rewardKey: string
+  points: number
+  category: string
+  redeemedAt: Date
+}
+
+export async function getRedeemedRewards(userId: string, limit = 100): Promise<RedeemedReward[]> {
+  const client = await getMongoClientPromise()
+  const db = client.db()
+  return db
+    .collection<RedeemedReward>('redeemed_rewards')
+    .find({ userId: new ObjectId(userId) })
+    .sort({ redeemedAt: -1 })
+    .limit(limit)
+    .toArray()
+}

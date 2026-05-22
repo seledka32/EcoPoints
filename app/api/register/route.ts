@@ -2,11 +2,15 @@ import { NextResponse } from 'next/server'
 import { hash } from 'bcryptjs'
 
 import getMongoClientPromise from '@/lib/server/mongodb'
-import { addPoints } from '@/lib/server/transactions'
 import { generateUniqueShortCode } from '@/lib/server/short-code'
+import { sendVerificationEmail } from '@/lib/server/email'
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+function generateCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
 export async function POST(req: Request) {
@@ -40,27 +44,38 @@ export async function POST(req: Request) {
     }
 
     const passwordHash = await hash(password, 10)
-
     const shortCode = await generateUniqueShortCode(db)
 
-    const insertRes = await db.collection('users').insertOne({
+    // Create user with emailVerified: false (requires verification)
+    await db.collection('users').insertOne({
       email,
       passwordHash,
       role: 'user',
       shortCode,
+      emailVerified: false,
       createdAt: new Date(),
     })
 
-    await addPoints({
-      userId: insertRes.insertedId,
-      amount: 100,
-      type: 'bonus',
-      description: 'Приветственный бонус',
+    // Generate and store verification code (expires in 15 min)
+    const code = generateCode()
+    await db.collection('email_verifications').deleteMany({ email })
+    await db.collection('email_verifications').insertOne({
+      email,
+      code,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+      createdAt: new Date(),
     })
 
+    // Send verification email
+    await sendVerificationEmail(email, code)
+
     return NextResponse.json({ ok: true }, { status: 201 })
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Произошла ошибка'
+    // SMTP errors
+    if (message.includes('SMTP') || message.includes('credentials not configured')) {
+      return NextResponse.json({ error: 'Ошибка отправки письма. Проверьте настройки почты.' }, { status: 500 })
+    }
     return NextResponse.json({ error: 'Произошла ошибка' }, { status: 500 })
   }
 }
-
