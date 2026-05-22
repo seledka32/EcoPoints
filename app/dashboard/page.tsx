@@ -3,11 +3,14 @@ import { DashboardContent } from '@/components/dashboard-content'
 import { getServerSession } from 'next-auth'
 import { getAuthOptions } from '@/lib/server/auth'
 import { getPointsBalance } from '@/lib/server/points'
-import { getTransactions, getRedeemedRewards } from '@/lib/server/transactions'
+import { getTransactions, getRedeemedRewards, WasteItem } from '@/lib/server/transactions'
 
 export const dynamic = 'force-dynamic'
 
-function extractKg(description: string): number {
+function txTotalKg(wasteItems: WasteItem[] | undefined, description: string): number {
+  if (wasteItems && wasteItems.length > 0) {
+    return wasteItems.reduce((s, i) => s + i.kg, 0)
+  }
   const match = description.match(/(\d+(?:[.,]\d+)?)\s*кг/i)
   return match ? parseFloat(match[1].replace(',', '.')) : 0
 }
@@ -25,20 +28,34 @@ export default async function DashboardPage() {
     getRedeemedRewards(session.user.id, 100),
   ])
 
-  const kgRecycled = allTransactions
-    .filter((tx) => tx.type === 'recycle')
-    .reduce((sum, tx) => sum + extractKg(tx.description), 0)
+  const recycleTx = allTransactions.filter((tx) => tx.type === 'recycle')
+
+  const kgRecycled = recycleTx.reduce(
+    (sum, tx) => sum + txTotalKg(tx.wasteItems, tx.description),
+    0
+  )
+
+  const kgByMaterial: Record<string, number> = {}
+  recycleTx.forEach((tx) => {
+    if (tx.wasteItems && tx.wasteItems.length > 0) {
+      tx.wasteItems.forEach((item) => {
+        kgByMaterial[item.material] = (kgByMaterial[item.material] ?? 0) + item.kg
+      })
+    }
+  })
 
   return (
     <DashboardContent
       user={session.user}
       pointsBalance={pointsBalance}
       kgRecycled={kgRecycled}
+      kgByMaterial={kgByMaterial}
       allTransactions={allTransactions.map((tx) => ({
         id: String(tx._id),
         amount: tx.amount,
         type: tx.type,
         description: tx.description,
+        wasteItems: tx.wasteItems,
         createdAt: tx.createdAt,
       }))}
       redeemedRewards={redeemedRewards.map((r) => ({

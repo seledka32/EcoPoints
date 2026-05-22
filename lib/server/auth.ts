@@ -9,56 +9,73 @@ import getMongoClientPromise from '@/lib/server/mongodb'
 import { generateUniqueShortCode } from '@/lib/server/short-code'
 import { addPoints } from '@/lib/server/transactions'
 
+const googleClientId = process.env.GOOGLE_CLIENT_ID
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
+
 export function getAuthOptions(): NextAuthOptions {
+  const providers: NextAuthOptions['providers'] = []
+
+  if (googleClientId && googleClientSecret) {
+    providers.push(
+      GoogleProvider({
+        clientId: googleClientId,
+        clientSecret: googleClientSecret,
+        authorization: {
+          params: {
+            prompt: 'consent',
+            access_type: 'offline',
+            response_type: 'code',
+          },
+        },
+      })
+    )
+  }
+
+  providers.push(
+    CredentialsProvider({
+      name: 'credentials',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        const email = credentials?.email
+        const password = credentials?.password
+
+        if (!email || !password) return null
+
+        const client = await getMongoClientPromise()
+        const db = client.db()
+
+        const user = await db.collection('users').findOne<{
+          _id: unknown
+          email: string
+          passwordHash?: string
+          role?: string
+          emailVerified?: boolean | Date
+        }>({ email })
+
+        if (!user?.passwordHash) return null
+
+        const ok = await compare(password, user.passwordHash)
+        if (!ok) return null
+
+        if (user.emailVerified === false) {
+          throw new Error('EmailNotVerified')
+        }
+
+        return {
+          id: String(user._id),
+          email: user.email,
+          role: user.role ?? 'user',
+        }
+      },
+    })
+  )
+
   return {
     adapter: MongoDBAdapter(getMongoClientPromise()),
-    providers: [
-      GoogleProvider({
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      }),
-      CredentialsProvider({
-        name: 'credentials',
-        credentials: {
-          email: { label: 'Email', type: 'email' },
-          password: { label: 'Password', type: 'password' },
-        },
-        async authorize(credentials) {
-          const email = credentials?.email
-          const password = credentials?.password
-
-          if (!email || !password) return null
-
-          const client = await getMongoClientPromise()
-          const db = client.db()
-
-          const user = await db.collection('users').findOne<{
-            _id: unknown
-            email: string
-            passwordHash?: string
-            role?: string
-            emailVerified?: boolean | Date
-          }>({ email })
-
-          if (!user?.passwordHash) return null
-
-          const ok = await compare(password, user.passwordHash)
-          if (!ok) return null
-
-          // emailVerified === false means explicitly unverified (new user)
-          // undefined = old user (treat as verified for backward compat)
-          if (user.emailVerified === false) {
-            throw new Error('EmailNotVerified')
-          }
-
-          return {
-            id: String(user._id),
-            email: user.email,
-            role: user.role ?? 'user',
-          }
-        },
-      }),
-    ],
+    providers,
     pages: {
       signIn: '/auth/login',
       error: '/auth/error',
@@ -67,9 +84,26 @@ export function getAuthOptions(): NextAuthOptions {
       strategy: 'jwt',
     },
     callbacks: {
-      async jwt({ token, user }) {
-        if (user?.id) token.sub = user.id
-        if (user?.role) token.role = user.role
+      async jwt({ token, user, account }) {
+        if (user) {
+          token.sub = user.id
+          // For OAuth sign-ins (e.g. Google), user.role is not set by the adapter.
+          // Load it from the database so we always have it in the token.
+          if (account && account.provider !== 'credentials') {
+            try {
+              const client = await getMongoClientPromise()
+              const db = client.db()
+              const dbUser = await db.collection('users').findOne({
+                _id: new ObjectId(user.id),
+              })
+              token.role = (dbUser?.role as string | undefined) ?? 'user'
+            } catch {
+              token.role = 'user'
+            }
+          } else {
+            token.role = (user as { role?: string }).role ?? 'user'
+          }
+        }
         return token
       },
       async session({ session, token }) {
@@ -81,7 +115,6 @@ export function getAuthOptions(): NextAuthOptions {
       },
     },
     events: {
-      // Fires when a new user is created via OAuth (Google)
       async createUser({ user }) {
         if (!user.id) return
         try {
@@ -103,7 +136,7 @@ export function getAuthOptions(): NextAuthOptions {
             }),
           ])
         } catch {
-          // Non-fatal: user created, just missing shortCode/points
+          // Non-fatal
         }
       },
     },

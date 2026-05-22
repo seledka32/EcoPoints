@@ -21,13 +21,16 @@ export async function POST(req: Request) {
     amount?: unknown
     description?: string
     type?: string
+    wasteItems?: { material: string; kg: number }[]
   }
 
-  const { userId, amount, description, type = 'admin' } = body
+  const { userId, amount, description, type = 'admin', wasteItems } = body
 
-  if (!userId || !amount || !description) {
+  const isRecycle = type === 'recycle' || (wasteItems && wasteItems.length > 0)
+
+  if (!userId || !amount) {
     return NextResponse.json(
-      { error: 'userId, amount, description обязательны' },
+      { error: 'userId, amount обязательны' },
       { status: 400 }
     )
   }
@@ -43,6 +46,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Некорректный userId' }, { status: 400 })
   }
 
+  // Auto-generate description from wasteItems if not provided
+  const MATERIAL_LABELS: Record<string, string> = {
+    plastic: 'Пластик', paper: 'Бумага', glass: 'Стекло',
+    metal: 'Металл', electronics: 'Электроника', organic: 'Органика',
+  }
+  const resolvedDescription = (() => {
+    if (description?.trim()) return description.trim()
+    if (wasteItems && wasteItems.length > 0) {
+      return wasteItems
+        .map((i) => `${MATERIAL_LABELS[i.material] ?? i.material} ${i.kg} кг`)
+        .join(', ')
+    }
+    return 'Начисление баллов'
+  })()
+
   // Убеждаемся что пользователь существует
   const client = await getMongoClientPromise()
   const db = client.db()
@@ -54,8 +72,9 @@ export async function POST(req: Request) {
   await addPoints({
     userId,
     amount,
-    type: type === 'recycle' ? 'recycle' : 'admin',
-    description,
+    type: isRecycle ? 'recycle' : 'admin',
+    description: resolvedDescription,
+    wasteItems: isRecycle && wasteItems && wasteItems.length > 0 ? wasteItems : undefined,
     operatorId: session.user.id,
   })
 

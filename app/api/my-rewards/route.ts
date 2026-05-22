@@ -21,6 +21,8 @@ export async function GET() {
       points: number
       category: string
       redeemedAt: Date
+      couponCode?: string
+      used?: boolean
     }>('redeemed_rewards')
     .find({ userId: new ObjectId(session.user.id) })
     .sort({ redeemedAt: -1 })
@@ -34,6 +36,8 @@ export async function GET() {
       points: r.points,
       category: r.category,
       redeemedAt: r.redeemedAt,
+      couponCode: r.couponCode ?? null,
+      used: r.used ?? false,
     }))
   )
 }

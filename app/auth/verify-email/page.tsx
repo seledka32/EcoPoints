@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Leaf, ArrowLeft, Mail, RefreshCw } from 'lucide-react'
+import { Leaf, ArrowLeft, Mail, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import {
@@ -22,7 +22,7 @@ function VerifyEmailForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
   const [resendLoading, setResendLoading] = useState(false)
-  const [resendSuccess, setResendSuccess] = useState(false)
+  const [success, setSuccess] = useState(false)
 
   useEffect(() => {
     if (resendCooldown <= 0) return
@@ -30,8 +30,9 @@ function VerifyEmailForm() {
     return () => clearTimeout(timer)
   }, [resendCooldown])
 
-  const handleVerify = async () => {
-    if (code.length < 6) return
+  const handleVerify = async (overrideCode?: string) => {
+    const finalCode = overrideCode ?? code
+    if (finalCode.length < 6) return
     setIsLoading(true)
     setError(null)
 
@@ -39,7 +40,7 @@ function VerifyEmailForm() {
       const res = await fetch('/api/verify-email', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, code }),
+        body: JSON.stringify({ email, code: finalCode }),
       })
       const data = (await res.json()) as { ok?: boolean; error?: string }
 
@@ -48,7 +49,10 @@ function VerifyEmailForm() {
         return
       }
 
-      router.push('/auth/login?verified=true')
+      setSuccess(true)
+      setTimeout(() => {
+        router.push('/auth/login?verified=true')
+      }, 1500)
     } catch {
       setError('Произошла ошибка. Попробуйте ещё раз.')
     } finally {
@@ -56,9 +60,16 @@ function VerifyEmailForm() {
     }
   }
 
+  const handleCodeChange = (val: string) => {
+    setCode(val)
+    setError(null)
+    if (val.length === 6) {
+      handleVerify(val)
+    }
+  }
+
   const handleResend = async () => {
     setResendLoading(true)
-    setResendSuccess(false)
     setError(null)
 
     try {
@@ -70,13 +81,13 @@ function VerifyEmailForm() {
       const data = (await res.json()) as { ok?: boolean; error?: string }
 
       if (!res.ok) {
-        setError(data.error ?? 'Произошла ошибка')
+        setError(data.error ?? 'Не удалось отправить письмо')
         return
       }
 
-      setResendSuccess(true)
       setResendCooldown(60)
       setCode('')
+      setError(null)
     } catch {
       setError('Не удалось отправить письмо')
     } finally {
@@ -86,110 +97,125 @@ function VerifyEmailForm() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-[#0a0a0a] overflow-hidden">
-      <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/3 -left-24 w-96 h-96 bg-emerald-500/15 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 -right-24 w-96 h-96 bg-cyan-500/15 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 w-full max-w-md px-6">
+      <div className="relative z-10 w-full max-w-md px-4 py-8">
         <Link
           href="/auth/sign-up"
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors mb-6 text-sm"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-3.5 h-3.5" />
           Назад
         </Link>
 
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-cyan-400 rounded-xl flex items-center justify-center">
-              <Leaf className="w-5 h-5 text-black" />
+        <div className="bg-white/[0.04] backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/40 overflow-hidden">
+          <div className="h-px bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent" />
+
+          <div className="p-8">
+            {/* Logo */}
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-cyan-400 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <Leaf className="w-5 h-5 text-black" />
+              </div>
+              <span className="text-xl font-bold text-white tracking-tight">EcoPoints</span>
             </div>
-            <span className="text-xl font-bold text-white">EcoPoints</span>
-          </div>
 
-          {/* Icon */}
-          <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center">
-              <Mail className="w-8 h-8 text-emerald-400" />
-            </div>
-          </div>
-
-          <h1 className="text-2xl font-bold text-white mb-2 text-center">Подтвердите email</h1>
-          <p className="text-gray-400 mb-2 text-center text-sm">
-            Мы отправили 6-значный код на
-          </p>
-          <p className="text-emerald-400 font-medium text-center text-sm mb-8 break-all">
-            {email}
-          </p>
-
-          {resendSuccess && (
-            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 mb-6">
-              <p className="text-sm text-emerald-400 text-center">Новый код отправлен!</p>
-            </div>
-          )}
-
-          {/* OTP Input */}
-          <div className="flex justify-center mb-6">
-            <InputOTP
-              maxLength={6}
-              value={code}
-              onChange={(val) => {
-                setCode(val)
-                setError(null)
-              }}
-              onComplete={handleVerify}
-            >
-              <InputOTPGroup>
-                {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <InputOTPSlot
-                    key={i}
-                    index={i}
-                    className="w-12 h-12 text-lg border-white/20 bg-white/5 text-white data-[active=true]:border-emerald-500 data-[active=true]:ring-emerald-500/20"
-                  />
-                ))}
-              </InputOTPGroup>
-            </InputOTP>
-          </div>
-
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-6">
-              <p className="text-sm text-red-400 text-center">{error}</p>
-            </div>
-          )}
-
-          <Button
-            onClick={handleVerify}
-            disabled={code.length < 6 || isLoading}
-            className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-black font-semibold py-6 mb-4"
-          >
-            {isLoading ? (
-              <>
-                <Spinner className="mr-2 size-4" />
-                Проверка…
-              </>
+            {success ? (
+              /* Success state */
+              <div className="flex flex-col items-center py-6">
+                <div className="w-16 h-16 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mb-5">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">Email подтверждён!</h2>
+                <p className="text-gray-400 text-sm text-center">Перенаправляем вас на страницу входа…</p>
+                <div className="mt-4">
+                  <Spinner className="size-5 text-emerald-400" />
+                </div>
+              </div>
             ) : (
-              'Подтвердить'
-            )}
-          </Button>
+              <>
+                {/* Mail icon */}
+                <div className="flex justify-center mb-6">
+                  <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center">
+                    <Mail className="w-8 h-8 text-emerald-400" />
+                  </div>
+                </div>
 
-          <div className="text-center">
-            <p className="text-gray-500 text-sm mb-2">Не пришло письмо?</p>
-            <button
-              type="button"
-              onClick={handleResend}
-              disabled={resendLoading || resendCooldown > 0}
-              className="inline-flex items-center gap-1.5 text-sm text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {resendLoading ? (
-                <Spinner className="size-3.5" />
-              ) : (
-                <RefreshCw className="w-3.5 h-3.5" />
-              )}
-              {resendCooldown > 0
-                ? `Отправить повторно через ${resendCooldown}с`
-                : 'Отправить повторно'}
-            </button>
+                <h1 className="text-2xl font-bold text-white mb-2 text-center">Подтвердите email</h1>
+                <p className="text-gray-500 text-sm text-center mb-1">
+                  Мы отправили код на
+                </p>
+                <p className="text-emerald-400 font-medium text-center text-sm mb-7 break-all">
+                  {email || 'ваш email'}
+                </p>
+
+                {/* Error */}
+                {error && (
+                  <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-xl p-3.5 mb-5">
+                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                    <p className="text-sm text-red-400">{error}</p>
+                  </div>
+                )}
+
+                {/* OTP */}
+                <div className="flex justify-center mb-6">
+                  <InputOTP
+                    maxLength={6}
+                    value={code}
+                    onChange={handleCodeChange}
+                    disabled={isLoading}
+                  >
+                    <InputOTPGroup>
+                      {[0, 1, 2, 3, 4, 5].map((i) => (
+                        <InputOTPSlot
+                          key={i}
+                          index={i}
+                          className="w-12 h-12 text-lg border-white/15 bg-white/[0.04] text-white data-[active=true]:border-emerald-500 data-[active=true]:ring-emerald-500/20 rounded-xl"
+                        />
+                      ))}
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+
+                <Button
+                  onClick={() => handleVerify()}
+                  disabled={code.length < 6 || isLoading}
+                  className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-black font-semibold h-11 rounded-xl shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-60 mb-6"
+                >
+                  {isLoading ? (
+                    <>
+                      <Spinner className="mr-2 size-4" />
+                      Проверяем…
+                    </>
+                  ) : (
+                    'Подтвердить'
+                  )}
+                </Button>
+
+                <div className="text-center border-t border-white/[0.06] pt-5">
+                  <p className="text-gray-600 text-sm mb-3">Не получили письмо?</p>
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resendLoading || resendCooldown > 0}
+                    className="inline-flex items-center gap-1.5 text-sm text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {resendLoading ? (
+                      <Spinner className="size-3.5" />
+                    ) : (
+                      <RefreshCw className={`w-3.5 h-3.5 ${resendCooldown > 0 ? '' : 'hover:rotate-180 transition-transform duration-300'}`} />
+                    )}
+                    {resendCooldown > 0
+                      ? `Повторная отправка через ${resendCooldown} сек`
+                      : 'Отправить письмо повторно'}
+                  </button>
+                  <p className="text-gray-600 text-xs mt-2">Проверьте папку «Спам»</p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -5,6 +5,13 @@ import { ObjectId } from 'mongodb'
 import { getAuthOptions } from '@/lib/server/auth'
 import getMongoClientPromise from '@/lib/server/mongodb'
 
+const COUPON_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+function generateCouponCode(): string {
+  let code = ''
+  for (let i = 0; i < 8; i++) code += COUPON_CHARS[Math.floor(Math.random() * COUPON_CHARS.length)]
+  return code
+}
+
 // Mirror of rewards list — single source of truth for validation
 const REWARDS: Record<string, { points: number; category: string }> = {
   'reward-perekrestok':  { points: 300,  category: 'grocery' },
@@ -48,7 +55,7 @@ export async function POST(req: Request) {
       $set: { updatedAt: new Date() },
     },
     { returnDocument: 'after' }
-  ) as { balance: number } | null
+  ) as unknown as { balance: number } | null
 
   if (!pointsResult) {
     return NextResponse.json({ error: 'Недостаточно баллов' }, { status: 400 })
@@ -71,6 +78,8 @@ export async function POST(req: Request) {
       points: reward.points,
       category: reward.category,
       redeemedAt: now,
+      couponCode: generateCouponCode(),
+      used: false,
     }),
   ])
 

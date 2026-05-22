@@ -2,9 +2,10 @@
 
 import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
+import QRCode from 'react-qr-code'
 import {
   Gift, ShoppingBag, Coffee, Zap, Globe, Dumbbell, Tag,
-  CheckCircle2, Clock, Loader2, PackageOpen,
+  CheckCircle2, Clock, Loader2, PackageOpen, QrCode, X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -33,6 +34,8 @@ interface RedeemedReward {
   points: number
   category: string
   redeemedAt: string
+  couponCode: string | null
+  used: boolean
 }
 
 const categoryConfig: { key: CategoryKey; icon: React.ElementType }[] = [
@@ -81,6 +84,7 @@ export function DashboardRewardsContent({ user, pointsBalance }: DashboardReward
   // My rewards state
   const [myRewards, setMyRewards] = useState<RedeemedReward[] | null>(null)
   const [loadingMyRewards, setLoadingMyRewards] = useState(false)
+  const [qrReward, setQrReward] = useState<RedeemedReward | null>(null)
 
   const loadMyRewards = useCallback(async () => {
     if (myRewards !== null) return
@@ -284,12 +288,21 @@ export function DashboardRewardsContent({ user, pointsBalance }: DashboardReward
             {!loadingMyRewards && myRewards && myRewards.length > 0 && (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {myRewards.map((r) => (
-                  <div
+                  <button
                     key={r.id}
-                    className="flex items-start gap-4 rounded-2xl border border-border bg-card p-4 transition-all hover:border-emerald-500/20"
+                    type="button"
+                    onClick={() => r.couponCode && setQrReward(r)}
+                    className={`flex items-start gap-4 rounded-2xl border bg-card p-4 text-left transition-all ${
+                      r.couponCode
+                        ? 'cursor-pointer hover:border-emerald-500/40 hover:shadow-sm active:scale-[0.98] border-border'
+                        : 'cursor-default border-border'
+                    } ${r.used ? 'opacity-60' : ''}`}
                   >
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/10">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${r.used ? 'from-muted/40 to-muted/20' : 'from-emerald-500/20 to-cyan-500/10'}`}>
+                      {r.used
+                        ? <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
+                        : <QrCode className="h-5 w-5 text-emerald-500" />
+                      }
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -305,14 +318,76 @@ export function DashboardRewardsContent({ user, pointsBalance }: DashboardReward
                           {formatDate(r.redeemedAt, language)}
                         </span>
                       </div>
+
+                      {r.couponCode && (
+                        <div className="mt-2 flex items-center gap-1">
+                          {r.used ? (
+                            <span className="text-xs text-muted-foreground">Использован</span>
+                          ) : (
+                            <span className="text-xs font-medium text-emerald-500">Нажмите для QR-кода →</span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
           </>
         )}
       </main>
+
+      {/* QR Coupon Dialog */}
+      <Dialog open={!!qrReward} onOpenChange={(open) => !open && setQrReward(null)}>
+        <DialogContent className="border-border bg-card sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">
+              {qrReward ? t(qrReward.rewardKey) : ''}
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="pt-1 text-sm text-muted-foreground">
+                {qrReward ? t(`cat-${qrReward.category}`) : ''}
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+
+          {qrReward && (
+            <div className="flex flex-col items-center gap-5 py-2">
+              {qrReward.used ? (
+                <div className="flex flex-col items-center gap-3 py-4">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted/40">
+                    <X className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <p className="text-base font-semibold text-muted-foreground">Купон использован</p>
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-2xl border border-border bg-white p-4">
+                    <QRCode value={qrReward.couponCode!} size={180} />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-mono text-2xl font-bold tracking-[0.25em] text-foreground">
+                      {qrReward.couponCode}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Покажите этот код в заведении
+                    </p>
+                  </div>
+                  <div className="w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-center">
+                    <p className="text-xs text-muted-foreground">Стоимость купона</p>
+                    <p className="mt-0.5 text-lg font-bold text-foreground">
+                      {qrReward.points.toLocaleString('ru-RU')} {t('points-word')}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Получен {formatDate(qrReward.redeemedAt, language)}
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Confirmation Dialog */}
       <Dialog open={!!confirmReward} onOpenChange={(open) => !open && setConfirmReward(null)}>

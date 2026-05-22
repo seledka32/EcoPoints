@@ -17,11 +17,17 @@ import {
 import { useLanguage } from '@/hooks/use-language'
 import { useState } from 'react'
 
+interface WasteItem {
+  material: string
+  kg: number
+}
+
 interface TxItem {
   id: string
   amount: number
   type: string
   description: string
+  wasteItems?: WasteItem[]
   createdAt: Date | string
 }
 
@@ -37,6 +43,7 @@ interface DashboardContentProps {
   user: { email?: string | null; role?: string }
   pointsBalance: number
   kgRecycled?: number
+  kgByMaterial?: Record<string, number>
   allTransactions?: TxItem[]
   redeemedRewards?: RedeemedItem[]
 }
@@ -67,10 +74,16 @@ function txIcon(type: string) {
   return                         { bg: 'bg-yellow-500/15',  color: 'text-yellow-500',  Icon: Star }
 }
 
+const MATERIAL_LABELS: Record<string, string> = {
+  plastic: 'Пластик', paper: 'Бумага', glass: 'Стекло',
+  metal: 'Металл', electronics: 'Электроника', organic: 'Органика',
+}
+
 export function DashboardContent({
   user,
   pointsBalance,
   kgRecycled = 0,
+  kgByMaterial = {},
   allTransactions = [],
   redeemedRewards = [],
 }: DashboardContentProps) {
@@ -351,6 +364,18 @@ export function DashboardContent({
                 </p>
               </div>
             </div>
+            {Object.keys(kgByMaterial).length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {Object.entries(kgByMaterial).map(([mat, kg]) => (
+                  <span
+                    key={mat}
+                    className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400"
+                  >
+                    {MATERIAL_LABELS[mat] ?? mat}: {kg.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} кг
+                  </span>
+                ))}
+              </div>
+            )}
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto px-5 py-3">
@@ -380,6 +405,18 @@ export function DashboardContent({
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-foreground leading-tight">{tx.description}</p>
+                      {tx.wasteItems && tx.wasteItems.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {tx.wasteItems.map((item, i) => (
+                            <span
+                              key={i}
+                              className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground"
+                            >
+                              {MATERIAL_LABELS[item.material] ?? item.material} {item.kg} кг
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       <div className="mt-1 flex items-center gap-2">
                         <span className="flex items-center gap-0.5 text-xs text-emerald-500 font-medium">
                           <ArrowUpRight className="h-3 w-3" />

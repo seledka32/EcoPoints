@@ -3,12 +3,18 @@ import getMongoClientPromise from '@/lib/server/mongodb'
 
 export type TransactionType = 'recycle' | 'reward' | 'bonus' | 'admin'
 
+export interface WasteItem {
+  material: string
+  kg: number
+}
+
 export interface Transaction {
   _id: ObjectId
   userId: ObjectId
   amount: number
   type: TransactionType
   description: string
+  wasteItems?: WasteItem[]
   operatorId?: ObjectId
   createdAt: Date
 }
@@ -18,12 +24,14 @@ export async function addPoints({
   amount,
   type,
   description,
+  wasteItems,
   operatorId,
 }: {
   userId: string | ObjectId
   amount: number
   type: TransactionType
   description: string
+  wasteItems?: WasteItem[]
   operatorId?: string | ObjectId
 }): Promise<void> {
   const client = await getMongoClientPromise()
@@ -42,6 +50,7 @@ export async function addPoints({
       amount,
       type,
       description,
+      ...(wasteItems && wasteItems.length > 0 ? { wasteItems } : {}),
       ...(opOid ? { operatorId: opOid } : {}),
       createdAt: new Date(),
     }),
