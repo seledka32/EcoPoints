@@ -14,18 +14,18 @@ function generateCouponCode(): string {
 
 // Mirror of rewards list — single source of truth for validation
 const REWARDS: Record<string, { points: number; category: string }> = {
-  'reward-perekrestok':  { points: 300,  category: 'grocery' },
-  'reward-starbucks':    { points: 200,  category: 'cafe' },
-  'reward-ozon':         { points: 500,  category: 'online' },
-  'reward-kofemainia':   { points: 400,  category: 'cafe' },
-  'reward-worldclass':   { points: 1200, category: 'sport' },
-  'reward-vkusvill':     { points: 250,  category: 'grocery' },
-  'reward-yandex':       { points: 350,  category: 'transport' },
-  'reward-lamoda':       { points: 600,  category: 'online' },
-  'reward-fitnesshouse': { points: 900,  category: 'sport' },
-  'reward-magnit':       { points: 200,  category: 'grocery' },
-  'reward-costa':        { points: 180,  category: 'cafe' },
-  'reward-scooter':      { points: 300,  category: 'transport' },
+  'reward-narodny':    { points: 250, category: 'grocery' },
+  'reward-beta':       { points: 300, category: 'grocery' },
+  'reward-supara':     { points: 500, category: 'cafe' },
+  'reward-navat':      { points: 350, category: 'cafe' },
+  'reward-coffeelife': { points: 180, category: 'cafe' },
+  'reward-namba':      { points: 200, category: 'transport' },
+  'reward-maxim':      { points: 200, category: 'transport' },
+  'reward-megacom':    { points: 300, category: 'transport' },
+  'reward-kgkg':       { points: 400, category: 'online' },
+  'reward-lalafo':     { points: 450, category: 'online' },
+  'reward-goldsgym':   { points: 800, category: 'sport' },
+  'reward-fitline':    { points: 600, category: 'sport' },
 }
 
 export async function POST(req: Request) {
