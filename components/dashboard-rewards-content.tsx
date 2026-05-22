@@ -48,18 +48,18 @@ const categoryConfig: { key: CategoryKey; icon: React.ElementType }[] = [
 ]
 
 const rewards: { nameKey: string; points: number; category: CategoryKey; descKey: string }[] = [
-  { nameKey: 'reward-narodny',    points: 250, category: 'grocery',   descKey: 'reward-narodny-desc' },
-  { nameKey: 'reward-beta',       points: 300, category: 'grocery',   descKey: 'reward-beta-desc' },
-  { nameKey: 'reward-supara',     points: 500, category: 'cafe',      descKey: 'reward-supara-desc' },
-  { nameKey: 'reward-navat',      points: 350, category: 'cafe',      descKey: 'reward-navat-desc' },
-  { nameKey: 'reward-coffeelife', points: 180, category: 'cafe',      descKey: 'reward-coffeelife-desc' },
-  { nameKey: 'reward-namba',      points: 200, category: 'transport', descKey: 'reward-namba-desc' },
-  { nameKey: 'reward-maxim',      points: 200, category: 'transport', descKey: 'reward-maxim-desc' },
-  { nameKey: 'reward-megacom',    points: 300, category: 'transport', descKey: 'reward-megacom-desc' },
-  { nameKey: 'reward-kgkg',       points: 400, category: 'online',    descKey: 'reward-kgkg-desc' },
-  { nameKey: 'reward-lalafo',     points: 450, category: 'online',    descKey: 'reward-lalafo-desc' },
-  { nameKey: 'reward-goldsgym',   points: 800, category: 'sport',     descKey: 'reward-goldsgym-desc' },
-  { nameKey: 'reward-fitline',    points: 600, category: 'sport',     descKey: 'reward-fitline-desc' },
+  { nameKey: 'reward-narodny',  points: 250, category: 'grocery',   descKey: 'reward-narodny-desc' },
+  { nameKey: 'reward-beta',     points: 300, category: 'grocery',   descKey: 'reward-beta-desc' },
+  { nameKey: 'reward-kulikov',  points: 150, category: 'cafe',      descKey: 'reward-kulikov-desc' },
+  { nameKey: 'reward-moka',     points: 200, category: 'cafe',      descKey: 'reward-moka-desc' },
+  { nameKey: 'reward-alriano',  points: 300, category: 'cafe',      descKey: 'reward-alriano-desc' },
+  { nameKey: 'reward-giraffe',  points: 400, category: 'cafe',      descKey: 'reward-giraffe-desc' },
+  { nameKey: 'reward-supara',   points: 500, category: 'cafe',      descKey: 'reward-supara-desc' },
+  { nameKey: 'reward-namba',    points: 200, category: 'transport', descKey: 'reward-namba-desc' },
+  { nameKey: 'reward-yandex',   points: 250, category: 'transport', descKey: 'reward-yandex-desc' },
+  { nameKey: 'reward-megacom',  points: 300, category: 'transport', descKey: 'reward-megacom-desc' },
+  { nameKey: 'reward-kgkg',     points: 400, category: 'online',    descKey: 'reward-kgkg-desc' },
+  { nameKey: 'reward-levelup',  points: 700, category: 'sport',     descKey: 'reward-levelup-desc' },
 ]
 
 function formatDate(dateStr: string, lang: string) {

@@ -284,18 +284,18 @@ export function AdminContent({ adminEmail }: AdminContentProps) {
   }
 
   const REWARD_LABELS: Record<string, string> = {
-    'reward-narodny':    'Народный −10%',
-    'reward-beta':       'Beta Stores −10%',
-    'reward-supara':     'Supara бесплатное блюдо',
-    'reward-navat':      'Navat −15%',
-    'reward-coffeelife': 'Coffee Life бесплатный кофе',
-    'reward-namba':      'Namba Taxi поездка',
-    'reward-maxim':      'MaximTaxi поездка',
-    'reward-megacom':    'МегаКом 50 сом',
-    'reward-kgkg':       'Kg.kg −15%',
-    'reward-lalafo':     'Lalafo −20%',
-    'reward-goldsgym':   "Gold's Gym 1 день",
-    'reward-fitline':    'Fit Line тренировка',
+    'reward-narodny':  'Народный −10%',
+    'reward-beta':     'Beta Stores −10%',
+    'reward-kulikov':  'Куликов выпечка',
+    'reward-moka':     'Moka Coffee бесплатный кофе',
+    'reward-alriano':  'Alriano −10%',
+    'reward-giraffe':  'Жираф −15%',
+    'reward-supara':   'Supara бесплатное блюдо',
+    'reward-namba':    'Namba Taxi поездка',
+    'reward-yandex':   'Яндекс Go поездка',
+    'reward-megacom':  'МегаКом 50 сом',
+    'reward-kgkg':     'Kg.kg −15%',
+    'reward-levelup':  'Level Up 1 день',
   }
 
   return (

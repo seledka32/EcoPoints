@@ -128,9 +128,9 @@ export function DashboardContent({
   ]
 
   const availableRewards = [
-    { nameKey: 'reward-narodny',  points: 250, categoryKey: 'cat-grocery' },
-    { nameKey: 'reward-supara',   points: 500, categoryKey: 'cat-cafe' },
-    { nameKey: 'reward-kgkg',     points: 400, categoryKey: 'cat-online' },
+    { nameKey: 'reward-narodny', points: 250, categoryKey: 'cat-grocery' },
+    { nameKey: 'reward-kulikov', points: 150, categoryKey: 'cat-cafe' },
+    { nameKey: 'reward-yandex',  points: 250, categoryKey: 'cat-transport' },
   ]
 
   return (
