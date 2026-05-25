@@ -14,18 +14,24 @@ function generateCouponCode(): string {
 
 // Mirror of rewards list — single source of truth for validation
 const REWARDS: Record<string, { points: number; category: string }> = {
-  'reward-narodny':  { points: 250, category: 'grocery' },
-  'reward-beta':     { points: 300, category: 'grocery' },
-  'reward-kulikov':  { points: 150, category: 'cafe' },
-  'reward-moka':     { points: 200, category: 'cafe' },
-  'reward-alriano':  { points: 300, category: 'cafe' },
-  'reward-giraffe':  { points: 400, category: 'cafe' },
-  'reward-supara':   { points: 500, category: 'cafe' },
-  'reward-namba':    { points: 200, category: 'transport' },
-  'reward-yandex':   { points: 250, category: 'transport' },
-  'reward-megacom':  { points: 300, category: 'transport' },
-  'reward-kgkg':     { points: 400, category: 'online' },
-  'reward-levelup':  { points: 700, category: 'sport' },
+  'reward-narodny':    { points: 250, category: 'grocery' },
+  'reward-beta':       { points: 300, category: 'grocery' },
+  'reward-globus':     { points: 200, category: 'grocery' },
+  'reward-kulikov':    { points: 150, category: 'cafe' },
+  'reward-patisserie': { points: 250, category: 'cafe' },
+  'reward-moka':       { points: 200, category: 'cafe' },
+  'reward-alriano':    { points: 300, category: 'cafe' },
+  'reward-giraffe':    { points: 400, category: 'cafe' },
+  'reward-navat':      { points: 350, category: 'cafe' },
+  'reward-supara':     { points: 500, category: 'cafe' },
+  'reward-namba':      { points: 200, category: 'transport' },
+  'reward-maxim':      { points: 200, category: 'transport' },
+  'reward-yandex':     { points: 250, category: 'transport' },
+  'reward-megacom':    { points: 300, category: 'transport' },
+  'reward-beeline':    { points: 300, category: 'transport' },
+  'reward-kgkg':       { points: 400, category: 'online' },
+  'reward-lalafo':     { points: 350, category: 'online' },
+  'reward-levelup':    { points: 700, category: 'sport' },
 }
 
 export async function POST(req: Request) {
