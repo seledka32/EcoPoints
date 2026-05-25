@@ -78,8 +78,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true }, { status: 201 })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Произошла ошибка'
-    // SMTP errors
-    if (message.includes('SMTP') || message.includes('credentials not configured')) {
+    // Email send errors (Resend)
+    if (message.includes('RESEND_API_KEY') || message.includes('Resend error') || message.includes('SMTP') || message.includes('credentials not configured')) {
       return NextResponse.json({ error: 'Ошибка отправки письма. Проверьте настройки почты.' }, { status: 500 })
     }
     return NextResponse.json({ error: 'Произошла ошибка' }, { status: 500 })

@@ -1,29 +1,23 @@
-import nodemailer from 'nodemailer'
+import { Resend } from 'resend'
 
-function createTransporter() {
-  const host = process.env.SMTP_HOST
-  const port = parseInt(process.env.SMTP_PORT ?? '465')
-  const user = process.env.SMTP_USER
-  const pass = process.env.SMTP_PASSWORD
-
-  if (!host || !user || !pass) {
-    throw new Error('SMTP credentials not configured (SMTP_HOST, SMTP_USER, SMTP_PASSWORD)')
+function getResend(): Resend {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY is not configured')
   }
-
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-  })
+  return new Resend(apiKey)
 }
 
-export async function sendVerificationEmail(to: string, code: string): Promise<void> {
-  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER
-  const transporter = createTransporter()
+const FROM =
+  process.env.EMAIL_FROM ??
+  process.env.SMTP_FROM ??
+  'EcoPoints <onboarding@resend.dev>'
 
-  await transporter.sendMail({
-    from: `EcoPoints <${from}>`,
+export async function sendVerificationEmail(to: string, code: string): Promise<void> {
+  const resend = getResend()
+
+  const { error } = await resend.emails.send({
+    from: FROM,
     to,
     subject: 'Подтверждение email — EcoPoints',
     text: `Ваш код подтверждения: ${code}\n\nКод действителен 15 минут.`,
@@ -39,7 +33,6 @@ export async function sendVerificationEmail(to: string, code: string): Promise<v
     <tr>
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#111;border:1px solid #222;border-radius:16px;overflow:hidden;">
-          <!-- Header -->
           <tr>
             <td style="padding:32px 32px 24px;border-bottom:1px solid #1f1f1f;">
               <table cellpadding="0" cellspacing="0">
@@ -54,7 +47,6 @@ export async function sendVerificationEmail(to: string, code: string): Promise<v
               </table>
             </td>
           </tr>
-          <!-- Body -->
           <tr>
             <td style="padding:32px;">
               <p style="margin:0 0 8px;color:#9ca3af;font-size:13px;text-transform:uppercase;letter-spacing:1px;">Подтверждение почты</p>
@@ -64,7 +56,6 @@ export async function sendVerificationEmail(to: string, code: string): Promise<v
               <p style="margin:0 0 28px;color:#9ca3af;font-size:15px;line-height:1.6;">
                 Чтобы завершить регистрацию в EcoPoints, введите этот код на странице подтверждения:
               </p>
-              <!-- Code block -->
               <div style="background:#0a0a0a;border:2px solid #34d399;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
                 <span style="color:#34d399;font-size:40px;font-weight:700;letter-spacing:12px;font-family:monospace;">${code}</span>
               </div>
@@ -74,7 +65,6 @@ export async function sendVerificationEmail(to: string, code: string): Promise<v
               </p>
             </td>
           </tr>
-          <!-- Footer -->
           <tr>
             <td style="padding:20px 32px;border-top:1px solid #1f1f1f;text-align:center;">
               <p style="margin:0;color:#4b5563;font-size:12px;">© 2026 EcoPoints. Все права защищены.</p>
@@ -87,4 +77,8 @@ export async function sendVerificationEmail(to: string, code: string): Promise<v
 </body>
 </html>`,
   })
+
+  if (error) {
+    throw new Error(`Resend error: ${error.message}`)
+  }
 }
