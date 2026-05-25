@@ -1,5 +1,6 @@
 import { ObjectId } from 'mongodb'
 import getMongoClientPromise from '@/lib/server/mongodb'
+import { getRank } from '@/lib/ranks'
 
 export type TransactionType = 'recycle' | 'reward' | 'bonus' | 'admin'
 
@@ -44,6 +45,7 @@ export async function addPoints({
         : operatorId
       : undefined
 
+  // Insert transaction + update points balance in parallel
   await Promise.all([
     db.collection('transactions').insertOne({
       userId: userOid,
@@ -60,6 +62,19 @@ export async function addPoints({
       { upsert: true }
     ),
   ])
+
+  // Update denormalized totalPoints + rank in users (only for positive amounts)
+  if (amount !== 0) {
+    const userDoc = await db.collection('users').findOneAndUpdate(
+      { _id: userOid },
+      { $inc: { totalPoints: amount } },
+      { returnDocument: 'after', projection: { totalPoints: 1 } }
+    ) as { totalPoints?: number } | null
+
+    const newTotal = Math.max(0, userDoc?.totalPoints ?? 0)
+    const rank = getRank(newTotal).key
+    await db.collection('users').updateOne({ _id: userOid }, { $set: { rank } })
+  }
 }
 
 export async function getTransactions(userId: string, limit = 20): Promise<Transaction[]> {

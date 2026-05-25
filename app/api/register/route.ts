@@ -46,12 +46,18 @@ export async function POST(req: Request) {
     const passwordHash = await hash(password, 10)
     const shortCode = await generateUniqueShortCode(db)
 
+    const displayName = email.split('@')[0].slice(0, 30)
+
     // Create user with emailVerified: false (requires verification)
     await db.collection('users').insertOne({
       email,
       passwordHash,
       role: 'user',
       shortCode,
+      displayName,
+      totalPoints: 0,
+      rank: 'sprout',
+      team: null,
       emailVerified: false,
       createdAt: new Date(),
     })

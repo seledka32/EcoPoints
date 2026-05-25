@@ -12,9 +12,11 @@ import { useLanguage } from '@/hooks/use-language'
 type DashboardHeaderProps = {
   user: { email?: string | null; role?: string }
   variant?: 'main' | 'qr' | 'rewards' | 'map'
+  rankEmoji?: string
+  rankLabel?: string
 }
 
-export function DashboardHeader({ user, variant = 'main' }: DashboardHeaderProps) {
+export function DashboardHeader({ user, variant = 'main', rankEmoji, rankLabel }: DashboardHeaderProps) {
   const router = useRouter()
   const { t } = useLanguage()
 
@@ -49,6 +51,11 @@ export function DashboardHeader({ user, variant = 'main' }: DashboardHeaderProps
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <ThemeLanguageSwitcher />
+          {rankEmoji && rankLabel && (
+            <span className="hidden items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400 md:inline-flex">
+              {rankEmoji} {rankLabel}
+            </span>
+          )}
           <span className="hidden max-w-[200px] truncate text-sm text-muted-foreground md:inline">
             {user.email}
           </span>

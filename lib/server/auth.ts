@@ -122,11 +122,22 @@ export function getAuthOptions(): NextAuthOptions {
           const db = client.db()
           const userId = new ObjectId(user.id)
           const shortCode = await generateUniqueShortCode(db)
+          const displayName = (user.name ?? (user.email ?? '').split('@')[0]).slice(0, 30)
 
           await Promise.all([
             db.collection('users').updateOne(
               { _id: userId },
-              { $set: { role: 'user', shortCode, createdAt: new Date() } }
+              {
+                $set: {
+                  role: 'user',
+                  shortCode,
+                  displayName,
+                  totalPoints: 0,
+                  rank: 'sprout',
+                  team: null,
+                  createdAt: new Date(),
+                },
+              }
             ),
             addPoints({
               userId,
