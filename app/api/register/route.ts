@@ -3,6 +3,7 @@ import { hash } from 'bcryptjs'
 
 import getMongoClientPromise from '@/lib/server/mongodb'
 import { generateUniqueShortCode } from '@/lib/server/short-code'
+import { addPoints } from '@/lib/server/transactions'
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
     const shortCode = await generateUniqueShortCode(db)
     const displayName = email.split('@')[0].slice(0, 30)
 
-    await db.collection('users').insertOne({
+    const { insertedId } = await db.collection('users').insertOne({
       email,
       passwordHash,
       role: 'user',
@@ -48,6 +49,13 @@ export async function POST(req: Request) {
       team: null,
       emailVerified: true,
       createdAt: new Date(),
+    })
+
+    await addPoints({
+      userId: insertedId,
+      amount: 100,
+      type: 'bonus',
+      description: 'Приветственный бонус',
     })
 
     return NextResponse.json({ ok: true }, { status: 201 })
