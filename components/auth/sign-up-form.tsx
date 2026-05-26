@@ -44,6 +44,7 @@ function PasswordStrength({ password }: { password: string }) {
 
 export function SignUpForm() {
   const [email, setEmail] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
   const [repeatPassword, setRepeatPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -59,6 +60,12 @@ export function SignUpForm() {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
+
+    if (displayName.trim().length > 0 && displayName.trim().length < 2) {
+      setError('Никнейм должен содержать минимум 2 символа')
+      setIsLoading(false)
+      return
+    }
 
     if (password !== repeatPassword) {
       setError('Пароли не совпадают')
@@ -76,7 +83,7 @@ export function SignUpForm() {
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, displayName }),
       })
 
       const data = (await res.json()) as { error?: string }
@@ -180,6 +187,25 @@ export function SignUpForm() {
 
             {/* Form */}
             <form onSubmit={handleSignUp} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="display-name" className="text-gray-400 text-xs font-medium uppercase tracking-wide">
+                  Никнейм
+                </Label>
+                <Input
+                  id="display-name"
+                  type="text"
+                  placeholder="Как вас называть?"
+                  autoComplete="nickname"
+                  maxLength={30}
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="bg-white/[0.04] border-white/[0.10] text-white placeholder:text-gray-600 focus:border-emerald-500/60 focus:ring-0 focus:bg-white/[0.06] h-11 rounded-xl transition-all"
+                />
+                {displayName.length > 0 && displayName.trim().length < 2 && (
+                  <p className="text-xs text-red-400">Минимум 2 символа</p>
+                )}
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="email" className="text-gray-400 text-xs font-medium uppercase tracking-wide">
                   Email

@@ -11,7 +11,7 @@ function isValidEmail(email: string) {
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as { email?: string; password?: string }
+    const body = (await req.json()) as { email?: string; password?: string; displayName?: string }
 
     const email = body.email?.trim().toLowerCase()
     const password = body.password
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
     const passwordHash = await hash(password, 10)
     const shortCode = await generateUniqueShortCode(db)
-    const displayName = email.split('@')[0].slice(0, 30)
+    const displayName = (body.displayName?.trim() || email.split('@')[0]).slice(0, 30)
 
     const { insertedId } = await db.collection('users').insertOne({
       email,
