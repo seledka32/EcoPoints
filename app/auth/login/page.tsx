@@ -31,6 +31,7 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const verified = searchParams?.get('verified')
+  const registered = searchParams?.get('registered')
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -109,10 +110,12 @@ function LoginForm() {
             <p className="text-gray-500 text-sm mb-7">Войдите, чтобы продолжить</p>
 
             {/* Success message */}
-            {verified && (
+            {(verified || registered) && (
               <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3.5 mb-6">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <p className="text-sm text-emerald-400">Email подтверждён! Войдите в аккаунт.</p>
+                <p className="text-sm text-emerald-400">
+                  {registered ? 'Аккаунт создан! Войдите.' : 'Email подтверждён! Войдите в аккаунт.'}
+                </p>
               </div>
             )}
 

@@ -84,7 +84,7 @@ export function SignUpForm() {
         throw new Error(data.error ?? 'Произошла ошибка')
       }
 
-      router.push(`/auth/verify-email?email=${encodeURIComponent(email)}`)
+      router.push('/auth/login?registered=1')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Произошла ошибка')
     } finally {
@@ -287,7 +287,7 @@ export function SignUpForm() {
         </div>
 
         <p className="mt-5 text-center text-gray-600 text-xs">
-          После регистрации придёт письмо с кодом подтверждения
+          Регистрируясь, вы соглашаетесь с условиями использования сервиса
         </p>
       </div>
     </div>

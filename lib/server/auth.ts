@@ -60,10 +60,6 @@ export function getAuthOptions(): NextAuthOptions {
         const ok = await compare(password, user.passwordHash)
         if (!ok) return null
 
-        if (user.emailVerified === false) {
-          throw new Error('EmailNotVerified')
-        }
-
         return {
           id: String(user._id),
           email: user.email,
