@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState, useEffect, useCallback } from 'react'
 import { Trophy, Medal, Crown, Star, Recycle, Wind } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard-header'
@@ -13,11 +14,12 @@ interface LeaderboardEntry {
   rank: RankKey
   points: number
   isCurrentUser: boolean
+  avatarUrl: string | null
 }
 
 interface LeaderboardData {
   top20: LeaderboardEntry[]
-  currentUser: { position: number; displayName: string; rank: RankKey; points: number } | null
+  currentUser: { position: number; displayName: string; rank: RankKey; points: number; avatarUrl: string | null } | null
 }
 
 interface LeaderboardContentProps {
@@ -50,12 +52,39 @@ function RankBadge({ rankKey }: { rankKey: RankKey }) {
   )
 }
 
-function Avatar({ name, size = 'md', rankKey }: { name: string; size?: 'sm' | 'md' | 'lg'; rankKey?: RankKey }) {
+function Avatar({
+  name,
+  avatarUrl,
+  size = 'md',
+  rankKey,
+}: {
+  name: string
+  avatarUrl?: string | null
+  size?: 'sm' | 'md' | 'lg'
+  rankKey?: RankKey
+}) {
   const initials =
     name.split(/[\s_-]/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') ||
     name[0]?.toUpperCase() || '?'
   const r = rankKey ? getRankMeta(rankKey) : null
+  const px = size === 'lg' ? 64 : size === 'md' ? 44 : 36
   const sizeClass = size === 'lg' ? 'h-16 w-16 text-xl' : size === 'md' ? 'h-11 w-11 text-sm' : 'h-9 w-9 text-xs'
+
+  if (avatarUrl) {
+    return (
+      <div className={`${sizeClass} shrink-0 overflow-hidden rounded-full border-2 border-white/10`}>
+        <Image
+          src={avatarUrl}
+          alt={name}
+          width={px}
+          height={px}
+          className="h-full w-full object-cover"
+          unoptimized
+        />
+      </div>
+    )
+  }
+
   return (
     <div
       className={`flex shrink-0 items-center justify-center rounded-full font-bold ${sizeClass} ${
@@ -92,7 +121,7 @@ function PodiumCard({
       } shadow-md ${cfg.glow}`}
     >
       <span className="text-xl">{cfg.badge}</span>
-      <Avatar name={entry.displayName} size={cfg.avatarSize} rankKey={entry.rank} />
+      <Avatar name={entry.displayName} avatarUrl={entry.avatarUrl} size={cfg.avatarSize} rankKey={entry.rank} />
       <div className="w-full text-center">
         <p className={`truncate text-xs font-semibold ${isCurrentUser ? 'text-emerald-400' : 'text-foreground'}`}>
           {entry.displayName}
@@ -348,7 +377,7 @@ export function LeaderboardContent({
                           </div>
 
                           {/* Avatar */}
-                          <Avatar name={entry.displayName} size="sm" rankKey={entry.rank} />
+                          <Avatar name={entry.displayName} avatarUrl={entry.avatarUrl} size="sm" rankKey={entry.rank} />
 
                           {/* Name + rank */}
                           <div className="relative min-w-0 flex-1">
@@ -384,7 +413,7 @@ export function LeaderboardContent({
                       <div className="flex w-7 shrink-0 justify-center">
                         <span className="text-sm font-bold text-emerald-400">#{data.currentUser.position}</span>
                       </div>
-                      <Avatar name={data.currentUser.displayName} size="sm" rankKey={data.currentUser.rank} />
+                      <Avatar name={data.currentUser.displayName} avatarUrl={data.currentUser.avatarUrl} size="sm" rankKey={data.currentUser.rank} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-emerald-400">
                           {data.currentUser.displayName}

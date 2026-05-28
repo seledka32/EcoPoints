@@ -15,11 +15,12 @@ export interface LeaderboardEntry {
   rank: RankKey
   points: number
   isCurrentUser: boolean
+  avatarUrl: string | null
 }
 
 export interface LeaderboardResponse {
   top20: LeaderboardEntry[]
-  currentUser: { position: number; displayName: string; rank: RankKey; points: number } | null
+  currentUser: { position: number; displayName: string; rank: RankKey; points: number; avatarUrl: string | null } | null
   period: string
 }
 
@@ -41,7 +42,7 @@ export async function GET(req: Request) {
     // Top 20 from denormalized users.totalPoints
     const top20raw = await db
       .collection('users')
-      .find({}, { projection: { displayName: 1, totalPoints: 1, rank: 1 } })
+      .find({}, { projection: { displayName: 1, totalPoints: 1, rank: 1, avatarUrl: 1 } })
       .sort({ totalPoints: -1 })
       .limit(20)
       .toArray()
@@ -53,6 +54,7 @@ export async function GET(req: Request) {
       rank: (u.rank as RankKey | undefined) ?? 'sprout',
       points: (u.totalPoints as number | undefined) ?? 0,
       isCurrentUser: String(u._id) === currentUserId,
+      avatarUrl: (u.avatarUrl as string | null | undefined) ?? null,
     }))
 
     // Current user data
@@ -70,6 +72,7 @@ export async function GET(req: Request) {
       displayName: (currentUserDoc?.displayName as string | undefined) ?? 'Эко-герой',
       rank: ((currentUserDoc?.rank as RankKey | undefined) ?? 'sprout'),
       points: userPoints,
+      avatarUrl: (currentUserDoc?.avatarUrl as string | null | undefined) ?? null,
     }
 
     return NextResponse.json({ top20, currentUser, period } satisfies LeaderboardResponse)
@@ -82,7 +85,7 @@ export async function GET(req: Request) {
       ? new Date(now.getFullYear(), now.getMonth(), 1)
       : new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
-  type AggRow = { _id: ObjectId; periodPoints: number; displayName?: string; rank?: string }
+  type AggRow = { _id: ObjectId; periodPoints: number; displayName?: string; rank?: string; avatarUrl?: string | null }
 
   const rows = await db
     .collection('transactions')
@@ -105,6 +108,7 @@ export async function GET(req: Request) {
           periodPoints: 1,
           displayName: '$userDoc.displayName',
           rank: '$userDoc.rank',
+          avatarUrl: '$userDoc.avatarUrl',
         },
       },
     ])
@@ -117,6 +121,7 @@ export async function GET(req: Request) {
     rank: (row.rank as RankKey | undefined) ?? getRank(row.periodPoints).key,
     points: row.periodPoints,
     isCurrentUser: String(row._id) === currentUserId,
+    avatarUrl: row.avatarUrl ?? null,
   }))
 
   // Current user's period points + position
@@ -144,13 +149,14 @@ export async function GET(req: Request) {
 
   const currentUserDoc = await db
     .collection('users')
-    .findOne({ _id: currentUserOid }, { projection: { displayName: 1, rank: 1 } })
+    .findOne({ _id: currentUserOid }, { projection: { displayName: 1, rank: 1, avatarUrl: 1 } })
 
   const currentUser = {
     position: higherCount + 1,
     displayName: (currentUserDoc?.displayName as string | undefined) ?? 'Эко-герой',
     rank: ((currentUserDoc?.rank as RankKey | undefined) ?? getRank(userPeriodPoints).key),
     points: userPeriodPoints,
+    avatarUrl: (currentUserDoc?.avatarUrl as string | null | undefined) ?? null,
   }
 
   return NextResponse.json({ top20, currentUser, period } satisfies LeaderboardResponse)

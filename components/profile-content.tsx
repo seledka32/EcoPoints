@@ -136,6 +136,7 @@ export function ProfileContent({
       })
       if (!res.ok) { toast.error('Ошибка загрузки'); return }
       setProfile((p) => p ? { ...p, avatarUrl: base64 } : p)
+      try { sessionStorage.setItem('eco-user-avatar', base64) } catch { /* ssr */ }
       toast.success('Аватар обновлён')
     } catch { toast.error('Не удалось обработать изображение') }
     finally { setAvatarUploading(false) }
@@ -151,6 +152,7 @@ export function ProfileContent({
       })
       if (!res.ok) { toast.error('Ошибка'); return }
       setProfile((p) => p ? { ...p, avatarUrl: null } : p)
+      try { sessionStorage.setItem('eco-user-avatar', '') } catch { /* ssr */ }
       toast.success('Аватар удалён')
     } catch { toast.error('Ошибка сети') }
     finally { setAvatarUploading(false) }
@@ -165,7 +167,7 @@ export function ProfileContent({
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <DashboardHeader user={{ email }} variant="map" />
+        <DashboardHeader user={{ email, avatarUrl: undefined }} variant="map" />
         <div className="flex justify-center py-20">
           <Spinner className="size-8 text-emerald-400" />
         </div>
@@ -201,7 +203,7 @@ export function ProfileContent({
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardHeader user={{ email }} variant="map" />
+      <DashboardHeader user={{ email, avatarUrl }} variant="map" />
 
       {/* Hidden file input */}
       <input
