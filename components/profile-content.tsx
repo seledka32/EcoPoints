@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import {
   Pencil, Check, X, Star, Recycle, Wind,
-  QrCode, MapPin, Gift, LogOut, Lock, Leaf, Copy,
+  QrCode, MapPin, Gift, LogOut, Lock, Leaf, Copy, Camera, Trash2,
 } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { Button } from '@/components/ui/button'
@@ -20,6 +21,7 @@ interface ProfileData {
   rank: RankKey
   totalPoints: number
   team: string | null
+  avatarUrl: string | null
 }
 
 interface ProfileContentProps {
@@ -37,6 +39,31 @@ function getRankMeta(key: RankKey) {
 
 const RANKS_ASC = [...RANKS].reverse()
 
+/* ── Canvas resize: crop center square → 256×256 JPEG ── */
+function resizeToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = reject
+    reader.onload = (e) => {
+      const img = new window.Image()
+      img.onerror = reject
+      img.onload = () => {
+        const size = Math.min(img.width, img.height)
+        const ox = (img.width - size) / 2
+        const oy = (img.height - size) / 2
+        const canvas = document.createElement('canvas')
+        canvas.width = 256
+        canvas.height = 256
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, ox, oy, size, size, 0, 0, 256, 256)
+        resolve(canvas.toDataURL('image/jpeg', 0.82))
+      }
+      img.src = e.target!.result as string
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
 export function ProfileContent({
   userId: _userId,
   email,
@@ -46,12 +73,15 @@ export function ProfileContent({
   transactionCount,
 }: ProfileContentProps) {
   const router = useRouter()
-  const [profile, setProfile] = useState<ProfileData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState(false)
-  const [nameInput, setNameInput] = useState('')
-  const [saving, setSaving] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [profile, setProfile]       = useState<ProfileData | null>(null)
+  const [loading, setLoading]       = useState(true)
+  const [editing, setEditing]       = useState(false)
+  const [nameInput, setNameInput]   = useState('')
+  const [saving, setSaving]         = useState(false)
   const [signingOut, setSigningOut] = useState(false)
+  const [avatarUploading, setAvatarUploading] = useState(false)
 
   useEffect(() => {
     fetch('/api/profile')
@@ -63,7 +93,7 @@ export function ProfileContent({
       .finally(() => setLoading(false))
   }, [])
 
-  const handleSave = async () => {
+  const handleSaveName = async () => {
     if (!nameInput.trim() || nameInput.trim().length < 2) return
     setSaving(true)
     try {
@@ -73,18 +103,57 @@ export function ProfileContent({
         body: JSON.stringify({ displayName: nameInput.trim() }),
       })
       const data = (await res.json()) as { ok?: boolean; displayName?: string; error?: string }
-      if (!res.ok) {
-        toast.error(data.error ?? 'Ошибка сохранения')
-        return
-      }
-      setProfile((prev) => prev ? { ...prev, displayName: data.displayName ?? nameInput.trim() } : prev)
+      if (!res.ok) { toast.error(data.error ?? 'Ошибка сохранения'); return }
+      setProfile((p) => p ? { ...p, displayName: data.displayName ?? nameInput.trim() } : p)
       setEditing(false)
       toast.success('Имя обновлено')
-    } catch {
-      toast.error('Ошибка сети')
-    } finally {
-      setSaving(false)
+    } catch { toast.error('Ошибка сети') }
+    finally { setSaving(false) }
+  }
+
+  const handleAvatarFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!fileInputRef.current) return
+    fileInputRef.current.value = ''
+    if (!file) return
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Файл слишком большой. Максимум 10 МБ.')
+      return
     }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Выберите изображение')
+      return
+    }
+
+    setAvatarUploading(true)
+    try {
+      const base64 = await resizeToBase64(file)
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ avatarUrl: base64 }),
+      })
+      if (!res.ok) { toast.error('Ошибка загрузки'); return }
+      setProfile((p) => p ? { ...p, avatarUrl: base64 } : p)
+      toast.success('Аватар обновлён')
+    } catch { toast.error('Не удалось обработать изображение') }
+    finally { setAvatarUploading(false) }
+  }
+
+  const handleRemoveAvatar = async () => {
+    setAvatarUploading(true)
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ avatarUrl: null }),
+      })
+      if (!res.ok) { toast.error('Ошибка'); return }
+      setProfile((p) => p ? { ...p, avatarUrl: null } : p)
+      toast.success('Аватар удалён')
+    } catch { toast.error('Ошибка сети') }
+    finally { setAvatarUploading(false) }
   }
 
   const handleSignOut = async () => {
@@ -104,36 +173,44 @@ export function ProfileContent({
     )
   }
 
-  const rankKey = profile?.rank ?? 'sprout'
+  const rankKey     = profile?.rank ?? 'sprout'
   const totalPoints = profile?.totalPoints ?? pointsBalance
   const { current: currentRank, next: nextRank, progress } = getRankProgress(totalPoints)
-  const rankMeta = getRankMeta(rankKey)
+  const rankMeta    = getRankMeta(rankKey)
   const displayName = profile?.displayName ?? email.split('@')[0]
+  const avatarUrl   = profile?.avatarUrl ?? null
 
   const initials = displayName
-    .split(/[\s_-]/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('') || displayName[0]?.toUpperCase() || '?'
+    .split(/[\s_-]/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') ||
+    displayName[0]?.toUpperCase() || '?'
 
   const achievements = [
-    { key: 'first-step', emoji: '🌱', label: 'Первый шаг',     desc: 'Первая сдача',         unlocked: transactionCount > 0     },
-    { key: 'recycler',   emoji: '♻️', label: 'Переработчик',   desc: '1 кг отходов',          unlocked: kgRecycled >= 1           },
-    { key: 'collector',  emoji: '⭐', label: 'Коллекционер',   desc: '100 баллов',            unlocked: totalPoints >= 100        },
-    { key: 'activist',   emoji: '🌿', label: 'Эко-активист',   desc: '10 кг отходов',         unlocked: kgRecycled >= 10          },
-    { key: 'expert',     emoji: '💎', label: 'Эко-профи',      desc: '1000 баллов',           unlocked: totalPoints >= 1000       },
-    { key: 'guardian',   emoji: '🌍', label: 'Хранитель',      desc: '100 кг отходов',        unlocked: kgRecycled >= 100         },
+    { key: 'first',     emoji: '🌱', label: 'Первый шаг',   desc: 'Первая сдача',         unlocked: transactionCount > 0     },
+    { key: 'recycler',  emoji: '♻️', label: 'Переработчик', desc: '1 кг отходов',          unlocked: kgRecycled >= 1           },
+    { key: 'collector', emoji: '⭐', label: 'Коллекционер', desc: '100 баллов',            unlocked: totalPoints >= 100        },
+    { key: 'activist',  emoji: '🌿', label: 'Эко-активист', desc: '10 кг отходов',         unlocked: kgRecycled >= 10          },
+    { key: 'expert',    emoji: '💎', label: 'Эко-профи',    desc: '1000 баллов',           unlocked: totalPoints >= 1000       },
+    { key: 'guardian',  emoji: '🌍', label: 'Хранитель',    desc: '100 кг отходов',        unlocked: kgRecycled >= 100         },
   ]
 
-  const unlockedCount = achievements.filter((a) => a.unlocked).length
-  const treesEquivalent = Math.max(0, Math.round(kgRecycled / 5))
-  const kmAvoided = Math.max(0, Math.round(co2Saved / 0.12))
-  const currentRankIdx = RANKS_ASC.findIndex((r) => r.key === rankKey)
-  const rankLineWidth = Math.min(100, (currentRankIdx / (RANKS_ASC.length - 1)) * 100)
+  const unlockedCount    = achievements.filter((a) => a.unlocked).length
+  const treesEquivalent  = Math.max(0, Math.round(kgRecycled / 5))
+  const kmAvoided        = Math.max(0, Math.round(co2Saved / 0.12))
+  const currentRankIdx   = RANKS_ASC.findIndex((r) => r.key === rankKey)
+  const rankLineWidth    = Math.min(100, (currentRankIdx / (RANKS_ASC.length - 1)) * 100)
 
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader user={{ email }} variant="map" />
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleAvatarFile}
+      />
 
       <main className="mx-auto max-w-lg px-4 py-6 pb-28">
 
@@ -144,9 +221,52 @@ export function ProfileContent({
 
           <div className="relative p-6">
             <div className="flex items-start gap-4">
-              {/* Avatar */}
-              <div className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-white/10 text-3xl font-bold shadow-xl ${rankMeta.bg} ${rankMeta.color}`}>
-                {initials}
+
+              {/* ── Avatar with upload overlay ── */}
+              <div className="relative shrink-0">
+                <div
+                  className={`group relative flex h-20 w-20 cursor-pointer items-center justify-center overflow-hidden rounded-full border-4 border-white/10 shadow-xl ${
+                    avatarUrl ? '' : `${rankMeta.bg} ${rankMeta.color}`
+                  } text-3xl font-bold`}
+                  onClick={() => !avatarUploading && fileInputRef.current?.click()}
+                  title="Изменить аватар"
+                >
+                  {avatarUrl ? (
+                    <Image
+                      src={avatarUrl}
+                      alt={displayName}
+                      width={80}
+                      height={80}
+                      className="h-full w-full object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    initials
+                  )}
+
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                    {avatarUploading ? (
+                      <Spinner className="size-5 text-white" />
+                    ) : (
+                      <>
+                        <Camera className="h-5 w-5 text-white" />
+                        <span className="text-[9px] font-semibold text-white">Изменить</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Remove avatar button */}
+                {avatarUrl && !avatarUploading && (
+                  <button
+                    onClick={handleRemoveAvatar}
+                    title="Удалить аватар"
+                    className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-red-500/10 hover:text-red-400"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                )}
               </div>
 
               {/* Name + email + rank */}
@@ -160,13 +280,13 @@ export function ProfileContent({
                       className="h-8 flex-1 border-white/[0.12] bg-white/[0.06] text-sm text-foreground"
                       autoFocus
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') void handleSave()
+                        if (e.key === 'Enter') void handleSaveName()
                         if (e.key === 'Escape') setEditing(false)
                       }}
                     />
                     <Button
                       size="sm"
-                      onClick={() => void handleSave()}
+                      onClick={() => void handleSaveName()}
                       disabled={saving}
                       className="h-8 w-8 shrink-0 bg-emerald-500 p-0 text-black hover:bg-emerald-400"
                     >
@@ -259,9 +379,9 @@ export function ProfileContent({
         {/* ── Stats row ── */}
         <div className="mb-4 grid grid-cols-3 gap-3">
           {[
-            { icon: Star,    color: 'text-yellow-400', bg: 'bg-yellow-500/15', value: pointsBalance.toLocaleString('ru-RU'), label: 'баллов' },
-            { icon: Recycle, color: 'text-emerald-400', bg: 'bg-emerald-500/15', value: kgRecycled > 0 ? `${kgRecycled}` : String(transactionCount), label: kgRecycled > 0 ? 'кг сдано' : 'сдач' },
-            { icon: Wind,    color: 'text-cyan-400',   bg: 'bg-cyan-500/15',   value: co2Saved > 0 ? String(co2Saved) : '—', label: 'кг CO₂' },
+            { icon: Star,    color: 'text-yellow-400',  bg: 'bg-yellow-500/15',  value: pointsBalance.toLocaleString('ru-RU'),                                         label: 'баллов'                        },
+            { icon: Recycle, color: 'text-emerald-400', bg: 'bg-emerald-500/15', value: kgRecycled > 0 ? `${kgRecycled}` : String(transactionCount),                   label: kgRecycled > 0 ? 'кг сдано' : 'сдач' },
+            { icon: Wind,    color: 'text-cyan-400',    bg: 'bg-cyan-500/15',    value: co2Saved > 0 ? String(co2Saved) : '—',                                          label: 'кг CO₂'                        },
           ].map(({ icon: Icon, color, bg, value, label }) => (
             <div key={label} className="rounded-2xl border border-border bg-card p-3 text-center">
               <div className={`mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-xl ${bg}`}>
@@ -285,9 +405,7 @@ export function ProfileContent({
                   <Leaf className="h-5 w-5 text-emerald-400" />
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-foreground">
-                    {treesEquivalent > 0 ? `~${treesEquivalent}` : '—'}
-                  </p>
+                  <p className="text-lg font-bold text-foreground">{treesEquivalent > 0 ? `~${treesEquivalent}` : '—'}</p>
                   <p className="text-xs text-muted-foreground">деревьев (экв.)</p>
                 </div>
               </div>
@@ -296,9 +414,7 @@ export function ProfileContent({
                   <Wind className="h-5 w-5 text-cyan-400" />
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-foreground">
-                    {kmAvoided > 0 ? `~${kmAvoided}` : '—'}
-                  </p>
+                  <p className="text-lg font-bold text-foreground">{kmAvoided > 0 ? `~${kmAvoided}` : '—'}</p>
                   <p className="text-xs text-muted-foreground">км без авто</p>
                 </div>
               </div>
@@ -310,16 +426,14 @@ export function ProfileContent({
         <div className="mb-4 rounded-2xl border border-border bg-card p-4">
           <p className="mb-4 text-sm font-semibold text-foreground">Путь эко-героя</p>
           <div className="relative flex items-center justify-between">
-            {/* Base line */}
             <div className="absolute left-5 right-5 top-5 h-0.5 bg-border" />
-            {/* Progress line */}
             <div
               className="absolute left-5 top-5 h-0.5 bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-700"
               style={{ width: `calc(${rankLineWidth}% * ((100% - 40px) / 100%))` }}
             />
-            {RANKS_ASC.map((rank, idx) => {
+            {RANKS_ASC.map((rank) => {
               const isUnlocked = totalPoints >= rank.minPoints
-              const isCurrent = rank.key === rankKey
+              const isCurrent  = rank.key === rankKey
               return (
                 <div key={rank.key} className="relative z-10 flex flex-col items-center gap-1.5">
                   <div
@@ -331,11 +445,7 @@ export function ProfileContent({
                           : 'border-border bg-card'
                     }`}
                   >
-                    {isUnlocked ? (
-                      rank.emoji
-                    ) : (
-                      <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
-                    )}
+                    {isUnlocked ? rank.emoji : <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />}
                   </div>
                   <span
                     className={`text-[9px] font-medium ${
@@ -363,9 +473,7 @@ export function ProfileContent({
               <div
                 key={a.key}
                 className={`flex flex-col items-center gap-1.5 rounded-xl border p-2.5 text-center transition-all ${
-                  a.unlocked
-                    ? 'border-emerald-500/25 bg-emerald-500/5'
-                    : 'border-border bg-muted/20 opacity-40'
+                  a.unlocked ? 'border-emerald-500/25 bg-emerald-500/5' : 'border-border bg-muted/20 opacity-40'
                 }`}
               >
                 <span className="text-2xl leading-none">{a.unlocked ? a.emoji : '🔒'}</span>
@@ -380,57 +488,26 @@ export function ProfileContent({
 
         {/* ── Quick actions ── */}
         <div className="mb-4 grid grid-cols-2 gap-3">
-          <Link
-            href="/dashboard/qr"
-            className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-4 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/5"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 transition-colors group-hover:bg-emerald-500/25">
-              <QrCode className="h-5 w-5 text-emerald-400" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">Мой QR</p>
-              <p className="text-xs text-muted-foreground">Показать карту</p>
-            </div>
-          </Link>
-
-          <Link
-            href="/dashboard/qr"
-            className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-4 transition-all hover:border-cyan-500/40 hover:bg-cyan-500/5"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-500/15 transition-colors group-hover:bg-cyan-500/25">
-              <Copy className="h-5 w-5 text-cyan-400" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">Пригласить</p>
-              <p className="text-xs text-muted-foreground">Реферальный код</p>
-            </div>
-          </Link>
-
-          <Link
-            href="/dashboard/map"
-            className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-4 transition-all hover:border-blue-500/40 hover:bg-blue-500/5"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 transition-colors group-hover:bg-blue-500/25">
-              <MapPin className="h-5 w-5 text-blue-400" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">Карта</p>
-              <p className="text-xs text-muted-foreground">Пункты приёма</p>
-            </div>
-          </Link>
-
-          <Link
-            href="/dashboard/rewards"
-            className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-4 transition-all hover:border-purple-500/40 hover:bg-purple-500/5"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/15 transition-colors group-hover:bg-purple-500/25">
-              <Gift className="h-5 w-5 text-purple-400" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">Награды</p>
-              <p className="text-xs text-muted-foreground">Каталог бонусов</p>
-            </div>
-          </Link>
+          {[
+            { href: '/dashboard/qr',      icon: QrCode, color: 'text-emerald-400', bg: 'bg-emerald-500/15', hoverBorder: 'hover:border-emerald-500/40', hoverBg: 'hover:bg-emerald-500/5', title: 'Мой QR',    sub: 'Показать карту'    },
+            { href: '/dashboard/qr',      icon: Copy,   color: 'text-cyan-400',    bg: 'bg-cyan-500/15',    hoverBorder: 'hover:border-cyan-500/40',    hoverBg: 'hover:bg-cyan-500/5',    title: 'Пригласить', sub: 'Реферальный код'  },
+            { href: '/dashboard/map',     icon: MapPin, color: 'text-blue-400',    bg: 'bg-blue-500/15',    hoverBorder: 'hover:border-blue-500/40',    hoverBg: 'hover:bg-blue-500/5',    title: 'Карта',      sub: 'Пункты приёма'    },
+            { href: '/dashboard/rewards', icon: Gift,   color: 'text-purple-400',  bg: 'bg-purple-500/15',  hoverBorder: 'hover:border-purple-500/40',  hoverBg: 'hover:bg-purple-500/5',  title: 'Награды',    sub: 'Каталог бонусов'  },
+          ].map(({ href, icon: Icon, color, bg, hoverBorder, hoverBg, title, sub }) => (
+            <Link
+              key={`${href}-${title}`}
+              href={href}
+              className={`group flex items-center gap-3 rounded-2xl border border-border bg-card p-4 transition-all ${hoverBorder} ${hoverBg}`}
+            >
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${bg} transition-opacity group-hover:opacity-80`}>
+                <Icon className={`h-5 w-5 ${color}`} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">{title}</p>
+                <p className="text-xs text-muted-foreground">{sub}</p>
+              </div>
+            </Link>
+          ))}
         </div>
 
         {/* ── Sign out ── */}
@@ -440,11 +517,7 @@ export function ProfileContent({
           disabled={signingOut}
           className="w-full border-red-500/20 bg-red-500/5 text-red-400 hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300"
         >
-          {signingOut ? (
-            <Spinner className="mr-2 size-4" />
-          ) : (
-            <LogOut className="mr-2 h-4 w-4" />
-          )}
+          {signingOut ? <Spinner className="mr-2 size-4" /> : <LogOut className="mr-2 h-4 w-4" />}
           Выйти из аккаунта
         </Button>
       </main>
