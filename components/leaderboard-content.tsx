@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Trophy, Medal, Crown } from 'lucide-react'
+import { Trophy, Medal, Crown, Star, Recycle, Wind } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { Spinner } from '@/components/ui/spinner'
 import { RANKS, type RankKey } from '@/lib/ranks'
@@ -20,13 +20,22 @@ interface LeaderboardData {
   currentUser: { position: number; displayName: string; rank: RankKey; points: number } | null
 }
 
+interface LeaderboardContentProps {
+  currentUserId: string
+  pointsBalance: number
+  kgRecycled: number
+  transactionCount: number
+  totalEarned: number
+}
+
+type Tab    = 'leaderboard' | 'achievements'
 type Period = 'alltime' | 'month' | 'week'
 
-const PERIOD_LABELS: Record<Period, string> = {
-  alltime: 'Всё время',
-  month: 'Месяц',
-  week: 'Неделя',
-}
+const PERIODS: { key: Period; label: string; icon: string }[] = [
+  { key: 'alltime', label: 'Всё время', icon: '🏆' },
+  { key: 'month',   label: 'Месяц',     icon: '📅' },
+  { key: 'week',    label: 'Неделя',    icon: '⚡' },
+]
 
 function getRankMeta(key: RankKey) {
   return RANKS.find((r) => r.key === key) ?? RANKS[RANKS.length - 1]
@@ -35,175 +44,377 @@ function getRankMeta(key: RankKey) {
 function RankBadge({ rankKey }: { rankKey: RankKey }) {
   const r = getRankMeta(rankKey)
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${r.bg} ${r.color}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${r.bg} ${r.color}`}>
       {r.emoji} {r.label}
     </span>
   )
 }
 
-function PositionIcon({ pos }: { pos: number }) {
-  if (pos === 1) return <Crown className="h-4 w-4 text-yellow-400" />
-  if (pos === 2) return <Medal className="h-4 w-4 text-gray-300" />
-  if (pos === 3) return <Medal className="h-4 w-4 text-amber-600" />
-  return <span className="w-4 text-center text-xs text-muted-foreground">{pos}</span>
-}
-
-function Avatar({ name }: { name: string }) {
-  const initials = name
-    .split(/[\s_-]/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('') || name[0]?.toUpperCase() || '?'
-
+function Avatar({ name, size = 'md', rankKey }: { name: string; size?: 'sm' | 'md' | 'lg'; rankKey?: RankKey }) {
+  const initials =
+    name.split(/[\s_-]/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') ||
+    name[0]?.toUpperCase() || '?'
+  const r = rankKey ? getRankMeta(rankKey) : null
+  const sizeClass = size === 'lg' ? 'h-16 w-16 text-xl' : size === 'md' ? 'h-11 w-11 text-sm' : 'h-9 w-9 text-xs'
   return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500/30 to-cyan-500/30 text-sm font-bold text-emerald-300">
+    <div
+      className={`flex shrink-0 items-center justify-center rounded-full font-bold ${sizeClass} ${
+        r ? `${r.bg} ${r.color}` : 'bg-gradient-to-br from-emerald-500/30 to-cyan-500/30 text-emerald-300'
+      }`}
+    >
       {initials}
     </div>
   )
 }
 
-export function LeaderboardContent({ currentUserId }: { currentUserId: string }) {
+/* ── Podium card for top 3 ── */
+function PodiumCard({
+  entry,
+  place,
+  isCurrentUser,
+}: {
+  entry: LeaderboardEntry
+  place: 1 | 2 | 3
+  isCurrentUser: boolean
+}) {
+  const configs = {
+    1: { icon: Crown,  iconColor: 'text-yellow-400', border: 'border-yellow-400/40', glow: 'shadow-yellow-500/20', badge: '👑', mt: 'mt-0',   avatarSize: 'lg' as const },
+    2: { icon: Medal,  iconColor: 'text-slate-300',  border: 'border-slate-300/30',  glow: 'shadow-slate-400/10', badge: '🥈', mt: 'mt-6',   avatarSize: 'md' as const },
+    3: { icon: Medal,  iconColor: 'text-amber-600',  border: 'border-amber-600/30',  glow: 'shadow-amber-600/10', badge: '🥉', mt: 'mt-10',  avatarSize: 'md' as const },
+  }
+  const cfg = configs[place]
+  const Icon = cfg.icon
+
+  return (
+    <div
+      className={`flex flex-1 flex-col items-center gap-2 rounded-2xl border p-3 ${cfg.mt} transition-all ${
+        isCurrentUser ? 'border-emerald-500/50 bg-emerald-500/5' : `${cfg.border} bg-card`
+      } shadow-md ${cfg.glow}`}
+    >
+      <span className="text-xl">{cfg.badge}</span>
+      <Avatar name={entry.displayName} size={cfg.avatarSize} rankKey={entry.rank} />
+      <div className="w-full text-center">
+        <p className={`truncate text-xs font-semibold ${isCurrentUser ? 'text-emerald-400' : 'text-foreground'}`}>
+          {entry.displayName}
+          {isCurrentUser && <span className="ml-1 text-emerald-500">(вы)</span>}
+        </p>
+        <p className="mt-0.5 text-sm font-bold tabular-nums text-foreground">
+          {entry.points.toLocaleString('ru-RU')}
+        </p>
+        <p className="text-[9px] text-muted-foreground">баллов</p>
+      </div>
+      <RankBadge rankKey={entry.rank} />
+    </div>
+  )
+}
+
+/* ── Achievements tab ── */
+const ACHIEVEMENTS = [
+  { key: 'first',     emoji: '🌱', label: 'Первый шаг',   desc: 'Первая сдача',       check: (p: AchProps) => p.transactionCount > 0     },
+  { key: 'recycler',  emoji: '♻️', label: 'Переработчик', desc: '1 кг отходов',        check: (p: AchProps) => p.kgRecycled >= 1           },
+  { key: 'collector', emoji: '⭐', label: 'Коллекционер', desc: '100 баллов',          check: (p: AchProps) => p.totalEarned >= 100        },
+  { key: 'activist',  emoji: '🌿', label: 'Эко-активист', desc: '10 кг отходов',       check: (p: AchProps) => p.kgRecycled >= 10          },
+  { key: 'expert',    emoji: '💎', label: 'Эко-профи',    desc: '1000 баллов',         check: (p: AchProps) => p.totalEarned >= 1000       },
+  { key: 'guardian',  emoji: '🌍', label: 'Хранитель',    desc: '100 кг отходов',      check: (p: AchProps) => p.kgRecycled >= 100         },
+]
+
+interface AchProps { transactionCount: number; kgRecycled: number; totalEarned: number }
+
+function AchievementsTab(props: AchProps) {
+  const items = ACHIEVEMENTS.map((a) => ({ ...a, unlocked: a.check(props) }))
+  const unlocked = items.filter((a) => a.unlocked).length
+  const pct = Math.round((unlocked / items.length) * 100)
+
+  return (
+    <div className="space-y-4">
+      {/* Progress summary */}
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-sm font-semibold text-foreground">Мои достижения</p>
+          <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">
+            {unlocked} / {items.length}
+          </span>
+        </div>
+        <div className="mb-3 h-2.5 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-700"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-xl bg-muted/40 p-2">
+            <Star className="mx-auto mb-0.5 h-3.5 w-3.5 text-yellow-400" />
+            <p className="text-sm font-bold tabular-nums text-foreground">{props.totalEarned.toLocaleString('ru-RU')}</p>
+            <p className="text-[10px] text-muted-foreground">баллов</p>
+          </div>
+          <div className="rounded-xl bg-muted/40 p-2">
+            <Recycle className="mx-auto mb-0.5 h-3.5 w-3.5 text-emerald-400" />
+            <p className="text-sm font-bold tabular-nums text-foreground">{props.kgRecycled > 0 ? `${props.kgRecycled}` : props.transactionCount}</p>
+            <p className="text-[10px] text-muted-foreground">{props.kgRecycled > 0 ? 'кг сдано' : 'сдач'}</p>
+          </div>
+          <div className="rounded-xl bg-muted/40 p-2">
+            <Wind className="mx-auto mb-0.5 h-3.5 w-3.5 text-cyan-400" />
+            <p className="text-sm font-bold tabular-nums text-foreground">
+              {props.kgRecycled > 0 ? `~${Math.round(props.kgRecycled * 2.5)}` : '—'}
+            </p>
+            <p className="text-[10px] text-muted-foreground">кг CO₂</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Achievements grid */}
+      <div className="grid grid-cols-2 gap-3">
+        {items.map((a) => (
+          <div
+            key={a.key}
+            className={`flex items-center gap-3 rounded-2xl border p-3 transition-all ${
+              a.unlocked
+                ? 'border-emerald-500/25 bg-emerald-500/5'
+                : 'border-border bg-card opacity-45'
+            }`}
+          >
+            <span className="text-2xl leading-none">{a.unlocked ? a.emoji : '🔒'}</span>
+            <div className="min-w-0">
+              <p className={`text-sm font-semibold leading-tight ${a.unlocked ? 'text-foreground' : 'text-muted-foreground'}`}>
+                {a.label}
+              </p>
+              <p className="text-xs text-muted-foreground">{a.desc}</p>
+              {a.unlocked && (
+                <span className="mt-1 inline-block rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-400">
+                  ✓ Разблокировано
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ════════════════ Main component ════════════════ */
+export function LeaderboardContent({
+  currentUserId,
+  pointsBalance,
+  kgRecycled,
+  transactionCount,
+  totalEarned,
+}: LeaderboardContentProps) {
+  const [tab, setTab]       = useState<Tab>('leaderboard')
   const [period, setPeriod] = useState<Period>('alltime')
-  const [data, setData] = useState<LeaderboardData | null>(null)
+  const [data, setData]     = useState<LeaderboardData | null>(null)
   const [loading, setLoading] = useState(true)
 
   const fetchData = useCallback(async (p: Period) => {
     setLoading(true)
     try {
       const res = await fetch(`/api/leaderboard?period=${p}`)
-      if (res.ok) {
-        const json = (await res.json()) as LeaderboardData
-        setData(json)
-      }
+      if (res.ok) setData((await res.json()) as LeaderboardData)
     } finally {
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => {
-    void fetchData(period)
-  }, [period, fetchData])
+  useEffect(() => { void fetchData(period) }, [period, fetchData])
 
-  const isCurrentUserInTop20 = data?.top20.some((e) => e.isCurrentUser) ?? false
+  const myEntry       = data?.top20.find((e) => e.isCurrentUser)
+  const myPosition    = myEntry?.position ?? data?.currentUser?.position
+  const myPoints      = myEntry?.points ?? data?.currentUser?.points ?? pointsBalance
+  const isInTop20     = !!myEntry
+  const maxPoints     = data?.top20[0]?.points ?? 1
+  const hasTop3       = (data?.top20.length ?? 0) >= 3
+  const listFrom4     = data?.top20.filter((e) => e.position >= 4) ?? []
 
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader user={{ email: '' }} variant="map" />
 
       <main className="mx-auto max-w-2xl px-4 py-6 pb-28">
-        {/* Title */}
-        <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-yellow-400/20 to-orange-400/20">
-            <Trophy className="h-5 w-5 text-yellow-400" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-foreground">Таблица лидеров</h1>
-            <p className="text-xs text-muted-foreground">Топ эко-активистов EcoPoints</p>
+
+        {/* ── Hero ── */}
+        <div className="relative mb-5 overflow-hidden rounded-3xl border border-white/[0.08] bg-gradient-to-br from-yellow-950/40 via-background to-orange-950/30 p-5">
+          <div className="pointer-events-none absolute -left-8 -top-8 h-40 w-40 rounded-full bg-yellow-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-8 -right-8 h-40 w-40 rounded-full bg-orange-500/10 blur-3xl" />
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-yellow-400/30 to-orange-400/30">
+                <Trophy className="h-6 w-6 text-yellow-400" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-foreground">Таблица лидеров</h1>
+                <p className="text-xs text-muted-foreground">Топ эко-активистов EcoPoints</p>
+              </div>
+            </div>
+            {myPosition && (
+              <div className="text-right">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">ваше место</p>
+                <p className="text-2xl font-bold text-emerald-400">#{myPosition}</p>
+                <p className="text-[10px] text-muted-foreground">{myPoints.toLocaleString('ru-RU')} баллов</p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Period tabs */}
-        <div className="mb-5 flex gap-2">
-          {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
+        {/* ── Tab switcher ── */}
+        <div className="mb-5 flex gap-2 rounded-2xl border border-border bg-card p-1">
+          {([
+            { key: 'leaderboard', label: '🏆 Топ',         tab: 'leaderboard' as Tab },
+            { key: 'achievements', label: '🎖 Достижения', tab: 'achievements' as Tab },
+          ] as const).map((t) => (
             <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`rounded-xl px-4 py-1.5 text-sm font-medium transition-all ${
-                period === p
+              key={t.key}
+              onClick={() => setTab(t.tab)}
+              className={`flex-1 rounded-xl py-2 text-sm font-semibold transition-all ${
+                tab === t.tab
                   ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20'
-                  : 'bg-card text-muted-foreground border border-border hover:text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              {PERIOD_LABELS[p]}
+              {t.label}
             </button>
           ))}
         </div>
 
-        {/* List */}
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <Spinner className="size-8 text-emerald-400" />
-          </div>
+        {tab === 'achievements' ? (
+          <AchievementsTab
+            transactionCount={transactionCount}
+            kgRecycled={kgRecycled}
+            totalEarned={totalEarned}
+          />
         ) : (
-          <div className="space-y-2">
-            {data?.top20.map((entry) => (
-              <div
-                key={entry.userId}
-                className={`flex items-center gap-3 rounded-2xl border p-3 transition-all ${
-                  entry.isCurrentUser
-                    ? 'border-emerald-500/40 bg-emerald-500/5 shadow-sm shadow-emerald-500/10'
-                    : 'border-border bg-card'
-                }`}
-              >
-                {/* Position */}
-                <div className="flex w-6 shrink-0 justify-center">
-                  <PositionIcon pos={entry.position} />
-                </div>
+          <>
+            {/* ── Period tabs ── */}
+            <div className="mb-5 flex gap-2">
+              {PERIODS.map((p) => (
+                <button
+                  key={p.key}
+                  onClick={() => setPeriod(p.key)}
+                  className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition-all ${
+                    period === p.key
+                      ? 'bg-foreground text-background shadow-sm'
+                      : 'border border-border bg-card text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <span>{p.icon}</span>
+                  {p.label}
+                </button>
+              ))}
+            </div>
 
-                {/* Avatar */}
-                <Avatar name={entry.displayName} />
-
-                {/* Name + rank */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className={`truncate text-sm font-semibold ${entry.isCurrentUser ? 'text-emerald-400' : 'text-foreground'}`}>
-                      {entry.displayName}
-                      {entry.isCurrentUser && <span className="ml-1 text-xs font-normal text-emerald-500">(вы)</span>}
-                    </span>
-                  </div>
-                  <div className="mt-0.5">
-                    <RankBadge rankKey={entry.rank} />
-                  </div>
-                </div>
-
-                {/* Points */}
-                <div className="shrink-0 text-right">
-                  <span className="text-sm font-bold text-foreground">
-                    {entry.points.toLocaleString('ru-RU')}
-                  </span>
-                  <p className="text-xs text-muted-foreground">баллов</p>
-                </div>
+            {loading ? (
+              <div className="flex justify-center py-20">
+                <Spinner className="size-8 text-emerald-400" />
               </div>
-            ))}
+            ) : (
+              <div className="space-y-3">
 
-            {/* Current user outside top-20 */}
-            {!isCurrentUserInTop20 && data?.currentUser && (
-              <>
-                <div className="my-3 flex items-center gap-2">
-                  <div className="flex-1 border-t border-dashed border-border" />
-                  <span className="text-xs text-muted-foreground">ваше место</span>
-                  <div className="flex-1 border-t border-dashed border-border" />
-                </div>
-                <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/40 bg-emerald-500/5 p-3">
-                  <div className="flex w-6 shrink-0 justify-center">
-                    <span className="text-xs font-bold text-emerald-400">#{data.currentUser.position}</span>
+                {/* ── Top 3 podium ── */}
+                {hasTop3 && (
+                  <div className="mb-2 flex items-end gap-2">
+                    <PodiumCard entry={data!.top20[1]} place={2} isCurrentUser={data!.top20[1].isCurrentUser} />
+                    <PodiumCard entry={data!.top20[0]} place={1} isCurrentUser={data!.top20[0].isCurrentUser} />
+                    <PodiumCard entry={data!.top20[2]} place={3} isCurrentUser={data!.top20[2].isCurrentUser} />
                   </div>
-                  <Avatar name={data.currentUser.displayName} />
-                  <div className="min-w-0 flex-1">
-                    <span className="text-sm font-semibold text-emerald-400">
-                      {data.currentUser.displayName} <span className="text-xs font-normal text-emerald-500">(вы)</span>
-                    </span>
-                    <div className="mt-0.5">
-                      <RankBadge rankKey={data.currentUser.rank} />
+                )}
+
+                {/* ── List 4-20 ── */}
+                {listFrom4.length > 0 && (
+                  <div className="rounded-2xl border border-border bg-card overflow-hidden">
+                    {listFrom4.map((entry, idx) => {
+                      const barW = Math.max(4, Math.round((entry.points / maxPoints) * 100))
+                      return (
+                        <div
+                          key={entry.userId}
+                          className={`relative flex items-center gap-3 px-4 py-3 transition-colors ${
+                            idx !== listFrom4.length - 1 ? 'border-b border-border' : ''
+                          } ${entry.isCurrentUser ? 'bg-emerald-500/5' : 'hover:bg-muted/30'}`}
+                        >
+                          {/* Subtle progress bar bg */}
+                          <div
+                            className="pointer-events-none absolute left-0 top-0 h-full rounded-l-none bg-emerald-500/[0.04] transition-all"
+                            style={{ width: `${barW}%` }}
+                          />
+
+                          {/* Position */}
+                          <div className="relative flex w-7 shrink-0 justify-center">
+                            {entry.position <= 9 ? (
+                              <span className={`text-sm font-bold ${entry.isCurrentUser ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+                                {entry.position}
+                              </span>
+                            ) : (
+                              <span className="text-xs font-semibold text-muted-foreground">{entry.position}</span>
+                            )}
+                          </div>
+
+                          {/* Avatar */}
+                          <Avatar name={entry.displayName} size="sm" rankKey={entry.rank} />
+
+                          {/* Name + rank */}
+                          <div className="relative min-w-0 flex-1">
+                            <p className={`truncate text-sm font-semibold ${entry.isCurrentUser ? 'text-emerald-400' : 'text-foreground'}`}>
+                              {entry.displayName}
+                              {entry.isCurrentUser && <span className="ml-1 text-xs font-normal text-emerald-500">(вы)</span>}
+                            </p>
+                            <RankBadge rankKey={entry.rank} />
+                          </div>
+
+                          {/* Points */}
+                          <div className="relative shrink-0 text-right">
+                            <span className="text-sm font-bold tabular-nums text-foreground">
+                              {entry.points.toLocaleString('ru-RU')}
+                            </span>
+                            <p className="text-[10px] text-muted-foreground">баллов</p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* ── Current user outside top-20 ── */}
+                {!isInTop20 && data?.currentUser && (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 border-t border-dashed border-border" />
+                      <span className="text-xs text-muted-foreground">ваше место</span>
+                      <div className="flex-1 border-t border-dashed border-border" />
                     </div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <span className="text-sm font-bold text-foreground">
-                      {data.currentUser.points.toLocaleString('ru-RU')}
-                    </span>
-                    <p className="text-xs text-muted-foreground">баллов</p>
-                  </div>
-                </div>
-              </>
-            )}
+                    <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/40 bg-emerald-500/5 px-4 py-3">
+                      <div className="flex w-7 shrink-0 justify-center">
+                        <span className="text-sm font-bold text-emerald-400">#{data.currentUser.position}</span>
+                      </div>
+                      <Avatar name={data.currentUser.displayName} size="sm" rankKey={data.currentUser.rank} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-emerald-400">
+                          {data.currentUser.displayName}
+                          <span className="ml-1 text-xs font-normal text-emerald-500">(вы)</span>
+                        </p>
+                        <RankBadge rankKey={data.currentUser.rank} />
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className="text-sm font-bold tabular-nums text-foreground">
+                          {data.currentUser.points.toLocaleString('ru-RU')}
+                        </span>
+                        <p className="text-[10px] text-muted-foreground">баллов</p>
+                      </div>
+                    </div>
+                  </>
+                )}
 
-            {data?.top20.length === 0 && (
-              <div className="py-16 text-center text-muted-foreground">
-                <Trophy className="mx-auto mb-3 h-10 w-10 opacity-20" />
-                <p className="text-sm">Пока нет данных за этот период</p>
+                {/* ── Empty state ── */}
+                {(data?.top20.length ?? 0) === 0 && (
+                  <div className="rounded-2xl border border-border bg-card py-16 text-center">
+                    <Trophy className="mx-auto mb-3 h-10 w-10 text-muted-foreground/20" />
+                    <p className="text-sm text-muted-foreground">Нет данных за этот период</p>
+                    <p className="mt-1 text-xs text-muted-foreground/60">
+                      Сдайте отходы, чтобы попасть в рейтинг!
+                    </p>
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
       </main>
     </div>
