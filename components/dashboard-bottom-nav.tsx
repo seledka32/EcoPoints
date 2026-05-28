@@ -3,22 +3,24 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MapPin, History, QrCode, Trophy, User } from 'lucide-react'
-
-const LEFT_NAV = [
-  { href: '/dashboard/map', icon: MapPin,  label: 'Карта' },
-  { href: '/dashboard',     icon: History, label: 'История' },
-]
-
-const RIGHT_NAV = [
-  { href: '/dashboard/leaderboard', icon: Trophy, label: 'Топ' },
-  { href: '/dashboard/profile',     icon: User,   label: 'Профиль' },
-]
+import { useLanguage } from '@/hooks/use-language'
 
 export function DashboardBottomNav() {
   const pathname = usePathname()
+  const { t } = useLanguage()
 
-  const isActive = (href: string) =>
-    href === '/dashboard' ? pathname === '/dashboard' : (pathname ?? '').startsWith(href)
+  const isActive = (href: string, exact = false) =>
+    exact ? pathname === href : (pathname ?? '').startsWith(href)
+
+  const LEFT_NAV = [
+    { href: '/dashboard/map', icon: MapPin,  label: t('nav-map'),         exact: false },
+    { href: '/dashboard',     icon: History, label: t('nav-history'),     exact: true  },
+  ]
+
+  const RIGHT_NAV = [
+    { href: '/dashboard/leaderboard', icon: Trophy, label: t('nav-leaderboard'), exact: false },
+    { href: '/dashboard/profile',     icon: User,   label: t('nav-profile'),     exact: false },
+  ]
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/90 backdrop-blur-xl md:hidden">
@@ -26,16 +28,15 @@ export function DashboardBottomNav() {
         className="flex items-end justify-around px-2 pt-2"
         style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
       >
-        {/* Left two items */}
-        {LEFT_NAV.map(({ href, icon: Icon, label }) => (
+        {LEFT_NAV.map(({ href, icon: Icon, label, exact }) => (
           <Link
             key={href}
             href={href}
             className={`flex flex-col items-center gap-1 rounded-xl px-4 py-1.5 transition-colors ${
-              isActive(href) ? 'text-emerald-500' : 'text-muted-foreground hover:text-foreground'
+              isActive(href, exact) ? 'text-emerald-500' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Icon className={`h-5 w-5 ${isActive(href) ? 'stroke-[2.5]' : 'stroke-2'}`} />
+            <Icon className={`h-5 w-5 ${isActive(href, exact) ? 'stroke-[2.5]' : 'stroke-2'}`} />
             <span className="text-[10px] font-medium">{label}</span>
           </Link>
         ))}
@@ -54,16 +55,15 @@ export function DashboardBottomNav() {
           <span className="mt-1 text-[10px] font-medium text-muted-foreground">QR</span>
         </Link>
 
-        {/* Right two items */}
-        {RIGHT_NAV.map(({ href, icon: Icon, label }) => (
+        {RIGHT_NAV.map(({ href, icon: Icon, label, exact }) => (
           <Link
             key={href}
             href={href}
             className={`flex flex-col items-center gap-1 rounded-xl px-4 py-1.5 transition-colors ${
-              isActive(href) ? 'text-emerald-500' : 'text-muted-foreground hover:text-foreground'
+              isActive(href, exact) ? 'text-emerald-500' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Icon className={`h-5 w-5 ${isActive(href) ? 'stroke-[2.5]' : 'stroke-2'}`} />
+            <Icon className={`h-5 w-5 ${isActive(href, exact) ? 'stroke-[2.5]' : 'stroke-2'}`} />
             <span className="text-[10px] font-medium">{label}</span>
           </Link>
         ))}

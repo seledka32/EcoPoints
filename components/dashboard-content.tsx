@@ -144,7 +144,7 @@ export function DashboardContent({
             <h1 className="mb-2 text-2xl font-bold text-foreground sm:text-3xl">{t('welcome')}</h1>
             <p className="text-muted-foreground">{t('track-progress')}</p>
           </div>
-          <Link href="/dashboard/qr" className="text-sm text-cyan-500 hover:text-cyan-400 sm:hidden">
+          <Link href="/dashboard/qr" className="text-sm text-cyan-500 hover:text-cyan-400">
             {t('qr-and-balance')}
           </Link>
         </div>

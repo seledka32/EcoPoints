@@ -6,9 +6,17 @@ import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
-import { Leaf, ArrowLeft, Eye, EyeOff, AlertCircle, Check } from 'lucide-react'
+import { Leaf, ArrowLeft, Eye, EyeOff, AlertCircle, Check, Globe } from 'lucide-react'
 import { signIn } from 'next-auth/react'
 import { Spinner } from '@/components/ui/spinner'
+import { useLanguage } from '@/hooks/use-language'
+import { languages, type Language } from '@/lib/languages'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 function GoogleIcon() {
   return (
@@ -21,11 +29,11 @@ function GoogleIcon() {
   )
 }
 
-function PasswordStrength({ password }: { password: string }) {
+function PasswordStrength({ password, t }: { password: string; t: (key: string) => string }) {
   const checks = [
-    { label: 'Минимум 6 символов', ok: password.length >= 6 },
-    { label: 'Есть буква', ok: /[a-zA-Zа-яА-Я]/.test(password) },
-    { label: 'Есть цифра', ok: /\d/.test(password) },
+    { label: t('auth-pw-check-length'), ok: password.length >= 6 },
+    { label: t('auth-pw-check-letter'), ok: /[a-zA-Zа-яА-Я]/.test(password) },
+    { label: t('auth-pw-check-digit'), ok: /\d/.test(password) },
   ]
   if (!password) return null
   return (
@@ -55,6 +63,7 @@ export function SignUpForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const refCode = searchParams?.get('ref')
+  const { language, setLanguage, t } = useLanguage()
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -62,19 +71,19 @@ export function SignUpForm() {
     setError(null)
 
     if (displayName.trim().length > 0 && displayName.trim().length < 2) {
-      setError('Никнейм должен содержать минимум 2 символа')
+      setError(t('auth-error-nickname-min'))
       setIsLoading(false)
       return
     }
 
     if (password !== repeatPassword) {
-      setError('Пароли не совпадают')
+      setError(t('auth-passwords-no-match'))
       setIsLoading(false)
       return
     }
 
     if (password.length < 6) {
-      setError('Пароль должен содержать минимум 6 символов')
+      setError(t('auth-error-pw-short'))
       setIsLoading(false)
       return
     }
@@ -88,12 +97,12 @@ export function SignUpForm() {
 
       const data = (await res.json()) as { error?: string }
       if (!res.ok) {
-        throw new Error(data.error ?? 'Произошла ошибка')
+        throw new Error(data.error ?? t('auth-error-generic'))
       }
 
       router.push('/auth/login?registered=1')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Произошла ошибка')
+      setError(err instanceof Error ? err.message : t('auth-error-generic'))
     } finally {
       setIsLoading(false)
     }
@@ -105,7 +114,7 @@ export function SignUpForm() {
     try {
       await signIn('google', { callbackUrl: '/dashboard' })
     } catch {
-      setError('Не удалось подключиться к Google. Попробуйте позже.')
+      setError(t('auth-error-google'))
       setGoogleLoading(false)
     }
   }
@@ -120,13 +129,42 @@ export function SignUpForm() {
         <div className="absolute bottom-1/3 -right-24 w-96 h-96 bg-cyan-500/15 rounded-full blur-3xl" />
       </div>
 
+      {/* Language switcher */}
+      <div className="absolute top-4 right-4 z-20">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-gray-200 gap-2"
+            >
+              <Globe className="h-4 w-4" />
+              <span className="text-sm">{languages[language].flag}</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            {Object.entries(languages).map(([lang, { name, flag }]) => (
+              <DropdownMenuItem
+                key={lang}
+                onClick={() => setLanguage(lang as Language)}
+                className={language === lang ? 'bg-accent' : ''}
+              >
+                <span className="mr-2">{flag}</span>
+                <span>{name}</span>
+                {language === lang && <span className="ml-auto text-xs">✓</span>}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
       <div className="relative z-10 w-full max-w-md px-4 py-8">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors mb-6 text-sm"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          На главную
+          {t('auth-back-home')}
         </Link>
 
         <div className="bg-white/[0.04] backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/40 overflow-hidden">
@@ -141,13 +179,13 @@ export function SignUpForm() {
               <span className="text-xl font-bold text-white tracking-tight">EcoPoints</span>
             </div>
 
-            <h1 className="text-2xl font-bold text-white mb-1">Создать аккаунт</h1>
-            <p className="text-gray-500 text-sm mb-7">Начните зарабатывать баллы за переработку</p>
+            <h1 className="text-2xl font-bold text-white mb-1">{t('auth-signup-title')}</h1>
+            <p className="text-gray-500 text-sm mb-7">{t('auth-signup-subtitle')}</p>
 
             {/* Referral badge */}
             {refCode && (
               <div className="mb-5 rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-300">
-                Приглашение от:{' '}
+                {t('auth-invited-by')}{' '}
                 <span className="font-mono font-semibold text-white">{refCode}</span>
               </div>
             )}
@@ -172,7 +210,7 @@ export function SignUpForm() {
               ) : (
                 <span className="mr-2"><GoogleIcon /></span>
               )}
-              Продолжить с Google
+              {t('auth-google-continue')}
             </Button>
 
             {/* Divider */}
@@ -181,7 +219,7 @@ export function SignUpForm() {
                 <div className="w-full border-t border-white/[0.08]" />
               </div>
               <div className="relative flex justify-center">
-                <span className="bg-transparent px-3 text-xs text-gray-600">или создайте аккаунт</span>
+                <span className="bg-transparent px-3 text-xs text-gray-600">{t('auth-or-create-account')}</span>
               </div>
             </div>
 
@@ -189,12 +227,12 @@ export function SignUpForm() {
             <form onSubmit={handleSignUp} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="display-name" className="text-gray-400 text-xs font-medium uppercase tracking-wide">
-                  Никнейм
+                  {t('auth-nickname-label')}
                 </Label>
                 <Input
                   id="display-name"
                   type="text"
-                  placeholder="Как вас называть?"
+                  placeholder={t('auth-nickname-placeholder')}
                   autoComplete="nickname"
                   maxLength={30}
                   value={displayName}
@@ -202,7 +240,7 @@ export function SignUpForm() {
                   className="bg-white/[0.04] border-white/[0.10] text-white placeholder:text-gray-600 focus:border-emerald-500/60 focus:ring-0 focus:bg-white/[0.06] h-11 rounded-xl transition-all"
                 />
                 {displayName.length > 0 && displayName.trim().length < 2 && (
-                  <p className="text-xs text-red-400">Минимум 2 символа</p>
+                  <p className="text-xs text-red-400">{t('auth-nickname-min')}</p>
                 )}
               </div>
 
@@ -224,7 +262,7 @@ export function SignUpForm() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="password" className="text-gray-400 text-xs font-medium uppercase tracking-wide">
-                  Пароль
+                  {t('auth-password-label')}
                 </Label>
                 <div className="relative">
                   <Input
@@ -245,12 +283,12 @@ export function SignUpForm() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                <PasswordStrength password={password} />
+                <PasswordStrength password={password} t={t} />
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="repeat-password" className="text-gray-400 text-xs font-medium uppercase tracking-wide">
-                  Повторите пароль
+                  {t('auth-repeat-password')}
                 </Label>
                 <div className="relative">
                   <Input
@@ -278,11 +316,11 @@ export function SignUpForm() {
                   </button>
                 </div>
                 {repeatPassword.length > 0 && !passwordsMatch && (
-                  <p className="text-xs text-red-400">Пароли не совпадают</p>
+                  <p className="text-xs text-red-400">{t('auth-passwords-no-match')}</p>
                 )}
                 {passwordsMatch && (
                   <p className="text-xs text-emerald-400 flex items-center gap-1">
-                    <Check className="w-3 h-3" /> Пароли совпадают
+                    <Check className="w-3 h-3" /> {t('auth-passwords-match')}
                   </p>
                 )}
               </div>
@@ -295,25 +333,25 @@ export function SignUpForm() {
                 {isLoading ? (
                   <>
                     <Spinner className="mr-2 size-4" />
-                    Создаём аккаунт…
+                    {t('auth-creating')}
                   </>
                 ) : (
-                  'Зарегистрироваться'
+                  t('auth-signup-btn')
                 )}
               </Button>
             </form>
 
             <p className="mt-6 text-center text-gray-500 text-sm">
-              Уже есть аккаунт?{' '}
+              {t('auth-has-account')}{' '}
               <Link href="/auth/login" className="text-emerald-400 hover:text-emerald-300 transition-colors font-medium">
-                Войти
+                {t('auth-login-btn')}
               </Link>
             </p>
           </div>
         </div>
 
         <p className="mt-5 text-center text-gray-600 text-xs">
-          Регистрируясь, вы соглашаетесь с условиями использования сервиса
+          {t('auth-signup-terms')}
         </p>
       </div>
     </div>

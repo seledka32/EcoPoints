@@ -6,9 +6,17 @@ import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, Suspense } from 'react'
-import { Leaf, ArrowLeft, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Leaf, ArrowLeft, Eye, EyeOff, AlertCircle, CheckCircle2, Globe } from 'lucide-react'
 import { signIn } from 'next-auth/react'
 import { Spinner } from '@/components/ui/spinner'
+import { useLanguage } from '@/hooks/use-language'
+import { languages, type Language } from '@/lib/languages'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 function GoogleIcon() {
   return (
@@ -32,6 +40,7 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const verified = searchParams?.get('verified')
   const registered = searchParams?.get('registered')
+  const { language, setLanguage, t } = useLanguage()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,13 +60,13 @@ function LoginForm() {
       }
 
       if (!res?.ok) {
-        setError('Неверный email или пароль')
+        setError(t('auth-error-credentials'))
         return
       }
 
       router.push('/dashboard')
     } catch {
-      setError('Произошла ошибка. Попробуйте позже.')
+      setError(t('auth-error-generic'))
     } finally {
       setIsLoading(false)
     }
@@ -68,9 +77,8 @@ function LoginForm() {
     setError(null)
     try {
       await signIn('google', { callbackUrl: '/dashboard' })
-      // If redirect doesn't happen (error), reset state
     } catch {
-      setError('Не удалось подключиться к Google. Попробуйте позже.')
+      setError(t('auth-error-google'))
       setGoogleLoading(false)
     }
   }
@@ -84,13 +92,42 @@ function LoginForm() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-emerald-400/5 rounded-full blur-2xl" />
       </div>
 
+      {/* Language switcher */}
+      <div className="absolute top-4 right-4 z-20">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-gray-200 gap-2"
+            >
+              <Globe className="h-4 w-4" />
+              <span className="text-sm">{languages[language].flag}</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            {Object.entries(languages).map(([lang, { name, flag }]) => (
+              <DropdownMenuItem
+                key={lang}
+                onClick={() => setLanguage(lang as Language)}
+                className={language === lang ? 'bg-accent' : ''}
+              >
+                <span className="mr-2">{flag}</span>
+                <span>{name}</span>
+                {language === lang && <span className="ml-auto text-xs">✓</span>}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
       <div className="relative z-10 w-full max-w-md px-4 py-8">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors mb-6 text-sm"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          На главную
+          {t('auth-back-home')}
         </Link>
 
         <div className="bg-white/[0.04] backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/40 overflow-hidden">
@@ -106,15 +143,15 @@ function LoginForm() {
               <span className="text-xl font-bold text-white tracking-tight">EcoPoints</span>
             </div>
 
-            <h1 className="text-2xl font-bold text-white mb-1">Добро пожаловать</h1>
-            <p className="text-gray-500 text-sm mb-7">Войдите, чтобы продолжить</p>
+            <h1 className="text-2xl font-bold text-white mb-1">{t('auth-login-title')}</h1>
+            <p className="text-gray-500 text-sm mb-7">{t('auth-login-subtitle')}</p>
 
             {/* Success message */}
             {(verified || registered) && (
               <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3.5 mb-6">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <p className="text-sm text-emerald-400">
-                  {registered ? 'Аккаунт создан! Войдите.' : 'Email подтверждён! Войдите в аккаунт.'}
+                  {registered ? t('auth-account-created') : t('auth-email-verified')}
                 </p>
               </div>
             )}
@@ -139,7 +176,7 @@ function LoginForm() {
               ) : (
                 <span className="mr-2"><GoogleIcon /></span>
               )}
-              Продолжить с Google
+              {t('auth-google-continue')}
             </Button>
 
             {/* Divider */}
@@ -148,7 +185,7 @@ function LoginForm() {
                 <div className="w-full border-t border-white/[0.08]" />
               </div>
               <div className="relative flex justify-center">
-                <span className="bg-transparent px-3 text-xs text-gray-600">или войдите с паролем</span>
+                <span className="bg-transparent px-3 text-xs text-gray-600">{t('auth-or-with-password')}</span>
               </div>
             </div>
 
@@ -172,7 +209,7 @@ function LoginForm() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="password" className="text-gray-400 text-xs font-medium uppercase tracking-wide">
-                  Пароль
+                  {t('auth-password-label')}
                 </Label>
                 <div className="relative">
                   <Input
@@ -203,25 +240,25 @@ function LoginForm() {
                 {isLoading ? (
                   <>
                     <Spinner className="mr-2 size-4" />
-                    Входим…
+                    {t('auth-logging-in')}
                   </>
                 ) : (
-                  'Войти'
+                  t('auth-login-btn')
                 )}
               </Button>
             </form>
 
             <p className="mt-6 text-center text-gray-500 text-sm">
-              Нет аккаунта?{' '}
+              {t('auth-no-account')}{' '}
               <Link href="/auth/sign-up" className="text-emerald-400 hover:text-emerald-300 transition-colors font-medium">
-                Зарегистрироваться
+                {t('auth-go-signup')}
               </Link>
             </p>
           </div>
         </div>
 
         <p className="mt-6 text-center text-gray-600 text-xs">
-          Входя в аккаунт, вы соглашаетесь с условиями использования сервиса
+          {t('auth-login-terms')}
         </p>
       </div>
     </div>
