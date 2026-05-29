@@ -17,26 +17,16 @@ import {
 import { useLanguage } from '@/hooks/use-language'
 import { useState } from 'react'
 
-interface WasteItem {
-  material: string
-  kg: number
-}
+interface WasteItem { material: string; kg: number }
 
 interface TxItem {
-  id: string
-  amount: number
-  type: string
-  description: string
-  wasteItems?: WasteItem[]
-  createdAt: Date | string
+  id: string; amount: number; type: string
+  description: string; wasteItems?: WasteItem[]; createdAt: Date | string
 }
 
 interface RedeemedItem {
-  id: string
-  rewardKey: string
-  points: number
-  category: string
-  redeemedAt: Date | string
+  id: string; rewardKey: string; points: number
+  category: string; redeemedAt: Date | string
 }
 
 interface DashboardContentProps {
@@ -50,33 +40,15 @@ interface DashboardContentProps {
 
 type SheetType = 'points' | 'kg' | 'rewards' | null
 
-function formatRelativeDate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date
-  const diff = Date.now() - d.getTime()
-  const minutes = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-  const days = Math.floor(diff / 86400000)
-  if (minutes < 1) return 'только что'
-  if (minutes < 60) return `${minutes} мин. назад`
-  if (hours < 24) return `${hours} ч. назад`
-  if (days === 1) return 'Вчера'
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
-}
-
-function formatFullDate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+const LOCALE_MAP: Record<string, string> = {
+  en: 'en-US', ru: 'ru-RU', ky: 'ru-RU',
+  ko: 'ko-KR', es: 'es-ES', fr: 'fr-FR', de: 'de-DE', ja: 'ja-JP',
 }
 
 function txIcon(type: string) {
   if (type === 'recycle') return { bg: 'bg-emerald-500/15', color: 'text-emerald-500', Icon: Recycle }
   if (type === 'reward')  return { bg: 'bg-purple-500/15',  color: 'text-purple-500',  Icon: Gift }
   return                         { bg: 'bg-yellow-500/15',  color: 'text-yellow-500',  Icon: Star }
-}
-
-const MATERIAL_LABELS: Record<string, string> = {
-  plastic: 'Пластик', paper: 'Бумага', glass: 'Стекло',
-  metal: 'Металл', electronics: 'Электроника', organic: 'Органика',
 }
 
 export function DashboardContent({
@@ -87,35 +59,56 @@ export function DashboardContent({
   allTransactions = [],
   redeemedRewards = [],
 }: DashboardContentProps) {
-  const { t } = useLanguage()
+  const { language, t } = useLanguage()
   const [openSheet, setOpenSheet] = useState<SheetType>(null)
+  const locale = LOCALE_MAP[language] ?? 'en-US'
 
-  // Recent 5 for the main feed
-  const recentTx = allTransactions.slice(0, 5)
+  const formatRelativeDate = (date: Date | string): string => {
+    const d = typeof date === 'string' ? new Date(date) : date
+    const diff = Date.now() - d.getTime()
+    const minutes = Math.floor(diff / 60000)
+    const hours   = Math.floor(diff / 3600000)
+    const days    = Math.floor(diff / 86400000)
+    if (minutes < 1) return t('ago-now')
+    if (minutes < 60) return t('ago-min').replace('%d', String(minutes))
+    if (hours   < 24) return t('ago-hour').replace('%d', String(hours))
+    if (days    === 1) return t('ago-yesterday')
+    return d.toLocaleDateString(locale, { day: 'numeric', month: 'short' })
+  }
 
-  // Filtered lists for sheets
-  const recycleTx = allTransactions.filter((tx) => tx.type === 'recycle')
-  const earnedTx  = allTransactions.filter((tx) => tx.amount > 0)
+  const formatFullDate = (date: Date | string): string => {
+    const d = typeof date === 'string' ? new Date(date) : date
+    return d.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
+  }
+
+  const MATERIAL_LABELS: Record<string, string> = {
+    plastic: t('waste-plastic'), paper: t('waste-paper'), glass: t('waste-glass'),
+    metal: t('waste-metal'), electronics: t('waste-electronics'), organic: t('waste-organic'),
+  }
+
+  const recentTx   = allTransactions.slice(0, 5)
+  const recycleTx  = allTransactions.filter((tx) => tx.type === 'recycle')
+  const earnedTx   = allTransactions.filter((tx) => tx.amount > 0)
   const totalSpent = redeemedRewards.reduce((s, r) => s + r.points, 0)
 
   const stats = [
     {
       key: 'points' as SheetType,
       labelKey: 'points-label',
-      value: pointsBalance.toLocaleString('ru-RU'),
+      value: pointsBalance.toLocaleString(locale),
       icon: Star,
       color: 'from-yellow-400 to-orange-400',
-      sub: `${earnedTx.length} начислений`,
+      sub: `${earnedTx.length} ${t('stat-accruals')}`,
     },
     {
       key: 'kg' as SheetType,
       labelKey: 'kg-recycled',
       value: kgRecycled > 0
-        ? kgRecycled.toLocaleString('ru-RU', { maximumFractionDigits: 1 })
-        : recycleTx.length > 0 ? `${recycleTx.length} сдач` : '0',
+        ? kgRecycled.toLocaleString(locale, { maximumFractionDigits: 1 })
+        : recycleTx.length > 0 ? `${recycleTx.length} ${t('submissions-sub')}` : '0',
       icon: Recycle,
       color: 'from-emerald-400 to-cyan-400',
-      sub: `${recycleTx.length} посещений`,
+      sub: `${recycleTx.length} ${t('stat-visits')}`,
     },
     {
       key: 'rewards' as SheetType,
@@ -123,7 +116,7 @@ export function DashboardContent({
       value: String(redeemedRewards.length),
       icon: Trophy,
       color: 'from-purple-400 to-pink-400',
-      sub: totalSpent > 0 ? `−${totalSpent.toLocaleString('ru-RU')} баллов` : 'нет наград',
+      sub: totalSpent > 0 ? `−${totalSpent.toLocaleString(locale)} ${t('points-word')}` : t('stat-no-rewards'),
     },
   ]
 
@@ -149,7 +142,7 @@ export function DashboardContent({
           </Link>
         </div>
 
-        {/* ── Stats cards (clickable) ── */}
+        {/* Stats */}
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {stats.map((stat) => (
             <button
@@ -162,34 +155,31 @@ export function DashboardContent({
                 <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${stat.color}`}>
                   <stat.icon className="h-6 w-6 text-black" />
                 </div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-emerald-500 transition-colors">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground transition-colors group-hover:text-emerald-500">
                   <TrendingUp className="h-4 w-4" />
                   <ChevronRight className="h-3 w-3" />
                 </div>
               </div>
-              <p className="mb-1 text-3xl font-bold text-foreground tabular-nums">{stat.value}</p>
+              <p className="mb-1 text-3xl font-bold tabular-nums text-foreground">{stat.value}</p>
               <p className="text-sm text-muted-foreground">{t(stat.labelKey)}</p>
               <p className="mt-1 text-xs text-muted-foreground/60">{stat.sub}</p>
             </button>
           ))}
         </div>
 
-        {/* ── Main grid ── */}
+        {/* Main grid */}
         <div className="grid gap-8 lg:grid-cols-2">
           {/* Recent activity */}
           <div className="rounded-2xl border border-border bg-card p-6">
             <h2 className="mb-6 text-xl font-bold text-foreground">{t('recent-activity')}</h2>
             <div className="space-y-1">
               {recentTx.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">Активности пока нет</p>
+                <p className="py-6 text-center text-sm text-muted-foreground">{t('empty-activity')}</p>
               ) : (
                 recentTx.map((tx) => {
                   const { bg, color, Icon } = txIcon(tx.type)
                   return (
-                    <div
-                      key={tx.id}
-                      className="flex items-center justify-between rounded-xl px-2 py-3 transition-colors hover:bg-muted/30"
-                    >
+                    <div key={tx.id} className="flex items-center justify-between rounded-xl px-2 py-3 transition-colors hover:bg-muted/30">
                       <div className="flex items-center gap-3">
                         <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${bg}`}>
                           <Icon className={`h-4 w-4 ${color}`} />
@@ -211,9 +201,9 @@ export function DashboardContent({
               <button
                 type="button"
                 onClick={() => setOpenSheet('points')}
-                className="mt-4 w-full text-center text-sm text-emerald-500 hover:text-emerald-400 transition-colors"
+                className="mt-4 w-full text-center text-sm text-emerald-500 transition-colors hover:text-emerald-400"
               >
-                Вся история →
+                {t('full-history-link')}
               </button>
             )}
           </div>
@@ -271,7 +261,7 @@ export function DashboardContent({
         </div>
       </main>
 
-      {/* ════════════ SHEET: Баллы ════════════ */}
+      {/* ── Sheet: Points ── */}
       <Sheet open={openSheet === 'points'} onOpenChange={(o) => !o && setOpenSheet(null)}>
         <SheetContent side="right" className="flex w-full flex-col gap-0 border-border bg-card p-0 sm:max-w-md">
           <SheetHeader className="border-b border-border px-5 py-4">
@@ -279,52 +269,43 @@ export function DashboardContent({
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-yellow-400 to-orange-400">
                 <Star className="h-4 w-4 text-black" />
               </div>
-              История баллов
+              {t('sheet-points-title')}
             </SheetTitle>
-            {/* Summary */}
             <div className="mt-3 grid grid-cols-2 gap-3">
               <div className="rounded-xl bg-muted/40 px-3 py-2.5">
-                <p className="text-xs text-muted-foreground">Текущий баланс</p>
-                <p className="mt-0.5 text-xl font-bold text-emerald-500 tabular-nums">
-                  {pointsBalance.toLocaleString('ru-RU')}
+                <p className="text-xs text-muted-foreground">{t('sheet-cur-balance')}</p>
+                <p className="mt-0.5 text-xl font-bold tabular-nums text-emerald-500">
+                  {pointsBalance.toLocaleString(locale)}
                 </p>
               </div>
               <div className="rounded-xl bg-muted/40 px-3 py-2.5">
-                <p className="text-xs text-muted-foreground">Всего начислений</p>
-                <p className="mt-0.5 text-xl font-bold text-foreground tabular-nums">
-                  {earnedTx.length}
-                </p>
+                <p className="text-xs text-muted-foreground">{t('sheet-total-accruals')}</p>
+                <p className="mt-0.5 text-xl font-bold tabular-nums text-foreground">{earnedTx.length}</p>
               </div>
             </div>
           </SheetHeader>
-
           <div className="flex-1 overflow-y-auto px-5 py-3">
             {allTransactions.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <Coins className="mb-3 h-10 w-10 text-muted-foreground/40" />
-                <p className="text-muted-foreground">Нет транзакций</p>
+                <p className="text-muted-foreground">{t('empty-transactions')}</p>
               </div>
             ) : (
               <div className="space-y-1">
                 {allTransactions.map((tx) => {
                   const { bg, color, Icon } = txIcon(tx.type)
                   return (
-                    <div
-                      key={tx.id}
-                      className="flex items-center gap-3 rounded-xl px-2 py-3 hover:bg-muted/30"
-                    >
+                    <div key={tx.id} className="flex items-center gap-3 rounded-xl px-2 py-3 hover:bg-muted/30">
                       <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${bg}`}>
                         <Icon className={`h-4 w-4 ${color}`} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground leading-tight">{tx.description}</p>
+                        <p className="text-sm font-medium leading-tight text-foreground">{tx.description}</p>
                         <p className="mt-0.5 text-xs text-muted-foreground">{formatFullDate(tx.createdAt)}</p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end">
-                        <span className={`flex items-center gap-0.5 font-semibold tabular-nums text-sm ${tx.amount >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>
-                          {tx.amount >= 0
-                            ? <ArrowUpRight className="h-3.5 w-3.5" />
-                            : <ArrowDownRight className="h-3.5 w-3.5" />}
+                        <span className={`flex items-center gap-0.5 text-sm font-semibold tabular-nums ${tx.amount >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>
+                          {tx.amount >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
                           {Math.abs(tx.amount)}
                         </span>
                         <span className="text-xs text-muted-foreground/60">{t('points-word')}</span>
@@ -338,7 +319,7 @@ export function DashboardContent({
         </SheetContent>
       </Sheet>
 
-      {/* ════════════ SHEET: Сдано кг ════════════ */}
+      {/* ── Sheet: Recycling ── */}
       <Sheet open={openSheet === 'kg'} onOpenChange={(o) => !o && setOpenSheet(null)}>
         <SheetContent side="right" className="flex w-full flex-col gap-0 border-border bg-card p-0 sm:max-w-md">
           <SheetHeader className="border-b border-border px-5 py-4">
@@ -346,22 +327,20 @@ export function DashboardContent({
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-400">
                 <Recycle className="h-4 w-4 text-black" />
               </div>
-              История сдачи мусора
+              {t('sheet-recycle-title')}
             </SheetTitle>
             <div className="mt-3 grid grid-cols-2 gap-3">
               <div className="rounded-xl bg-muted/40 px-3 py-2.5">
-                <p className="text-xs text-muted-foreground">Всего сдано</p>
-                <p className="mt-0.5 text-xl font-bold text-emerald-500 tabular-nums">
+                <p className="text-xs text-muted-foreground">{t('sheet-total-submitted')}</p>
+                <p className="mt-0.5 text-xl font-bold tabular-nums text-emerald-500">
                   {kgRecycled > 0
-                    ? `${kgRecycled.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} кг`
-                    : `${recycleTx.length} раз`}
+                    ? `${kgRecycled.toLocaleString(locale, { maximumFractionDigits: 1 })} ${t('kg-label')}`
+                    : `${recycleTx.length} ${t('submissions-sub')}`}
                 </p>
               </div>
               <div className="rounded-xl bg-muted/40 px-3 py-2.5">
-                <p className="text-xs text-muted-foreground">Посещений</p>
-                <p className="mt-0.5 text-xl font-bold text-foreground tabular-nums">
-                  {recycleTx.length}
-                </p>
+                <p className="text-xs text-muted-foreground">{t('sheet-visits')}</p>
+                <p className="mt-0.5 text-xl font-bold tabular-nums text-foreground">{recycleTx.length}</p>
               </div>
             </div>
             {Object.keys(kgByMaterial).length > 0 && (
@@ -371,54 +350,45 @@ export function DashboardContent({
                     key={mat}
                     className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400"
                   >
-                    {MATERIAL_LABELS[mat] ?? mat}: {kg.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} кг
+                    {MATERIAL_LABELS[mat] ?? mat}: {kg.toLocaleString(locale, { maximumFractionDigits: 1 })} {t('kg-label')}
                   </span>
                 ))}
               </div>
             )}
           </SheetHeader>
-
           <div className="flex-1 overflow-y-auto px-5 py-3">
             {recycleTx.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <Recycle className="mb-3 h-10 w-10 text-muted-foreground/40" />
-                <p className="text-muted-foreground">Сдач мусора пока нет</p>
-                <p className="mt-1 text-sm text-muted-foreground/60">
-                  Найдите ближайший пункт приёма на карте
-                </p>
+                <p className="text-muted-foreground">{t('empty-recycling')}</p>
+                <p className="mt-1 text-sm text-muted-foreground/60">{t('find-dropoff-map')}</p>
                 <Link href="/dashboard/map" onClick={() => setOpenSheet(null)}>
                   <Button variant="outline" size="sm" className="mt-4 border-border">
                     <MapPin className="mr-2 h-3.5 w-3.5" />
-                    Открыть карту
+                    {t('open-map')}
                   </Button>
                 </Link>
               </div>
             ) : (
               <div className="space-y-1">
                 {recycleTx.map((tx) => (
-                  <div
-                    key={tx.id}
-                    className="flex items-start gap-3 rounded-xl px-2 py-3 hover:bg-muted/30"
-                  >
+                  <div key={tx.id} className="flex items-start gap-3 rounded-xl px-2 py-3 hover:bg-muted/30">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15">
                       <Recycle className="h-4 w-4 text-emerald-500" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground leading-tight">{tx.description}</p>
+                      <p className="text-sm font-medium leading-tight text-foreground">{tx.description}</p>
                       {tx.wasteItems && tx.wasteItems.length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-1">
                           {tx.wasteItems.map((item, i) => (
-                            <span
-                              key={i}
-                              className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground"
-                            >
-                              {MATERIAL_LABELS[item.material] ?? item.material} {item.kg} кг
+                            <span key={i} className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
+                              {MATERIAL_LABELS[item.material] ?? item.material} {item.kg} {t('kg-label')}
                             </span>
                           ))}
                         </div>
                       )}
                       <div className="mt-1 flex items-center gap-2">
-                        <span className="flex items-center gap-0.5 text-xs text-emerald-500 font-medium">
+                        <span className="flex items-center gap-0.5 text-xs font-medium text-emerald-500">
                           <ArrowUpRight className="h-3 w-3" />
                           +{tx.amount} {t('points-word')}
                         </span>
@@ -437,7 +407,7 @@ export function DashboardContent({
         </SheetContent>
       </Sheet>
 
-      {/* ════════════ SHEET: Награды ════════════ */}
+      {/* ── Sheet: Rewards ── */}
       <Sheet open={openSheet === 'rewards'} onOpenChange={(o) => !o && setOpenSheet(null)}>
         <SheetContent side="right" className="flex w-full flex-col gap-0 border-border bg-card p-0 sm:max-w-md">
           <SheetHeader className="border-b border-border px-5 py-4">
@@ -445,24 +415,19 @@ export function DashboardContent({
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-400 to-pink-400">
                 <Trophy className="h-4 w-4 text-black" />
               </div>
-              Полученные награды
+              {t('sheet-rewards-title')}
             </SheetTitle>
             <div className="mt-3 grid grid-cols-2 gap-3">
               <div className="rounded-xl bg-muted/40 px-3 py-2.5">
-                <p className="text-xs text-muted-foreground">Получено наград</p>
-                <p className="mt-0.5 text-xl font-bold text-purple-400 tabular-nums">
-                  {redeemedRewards.length}
-                </p>
+                <p className="text-xs text-muted-foreground">{t('sheet-rewards-count')}</p>
+                <p className="mt-0.5 text-xl font-bold tabular-nums text-purple-400">{redeemedRewards.length}</p>
               </div>
               <div className="rounded-xl bg-muted/40 px-3 py-2.5">
-                <p className="text-xs text-muted-foreground">Потрачено баллов</p>
-                <p className="mt-0.5 text-xl font-bold text-foreground tabular-nums">
-                  {totalSpent.toLocaleString('ru-RU')}
-                </p>
+                <p className="text-xs text-muted-foreground">{t('sheet-points-spent')}</p>
+                <p className="mt-0.5 text-xl font-bold tabular-nums text-foreground">{totalSpent.toLocaleString(locale)}</p>
               </div>
             </div>
           </SheetHeader>
-
           <div className="flex-1 overflow-y-auto px-5 py-3">
             {redeemedRewards.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -478,20 +443,17 @@ export function DashboardContent({
             ) : (
               <div className="space-y-1">
                 {redeemedRewards.map((r) => (
-                  <div
-                    key={r.id}
-                    className="flex items-start gap-3 rounded-xl px-2 py-3 hover:bg-muted/30"
-                  >
+                  <div key={r.id} className="flex items-start gap-3 rounded-xl px-2 py-3 hover:bg-muted/30">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-500/15">
                       <CheckCircle2 className="h-4 w-4 text-purple-400" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground leading-tight">{t(r.rewardKey)}</p>
+                      <p className="text-sm font-medium leading-tight text-foreground">{t(r.rewardKey)}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">{t(`cat-${r.category}`)}</p>
                       <div className="mt-1 flex items-center gap-2">
-                        <span className="flex items-center gap-0.5 text-xs text-red-400 font-medium">
+                        <span className="flex items-center gap-0.5 text-xs font-medium text-red-400">
                           <ArrowDownRight className="h-3 w-3" />
-                          −{r.points.toLocaleString('ru-RU')} {t('points-word')}
+                          −{r.points.toLocaleString(locale)} {t('points-word')}
                         </span>
                         <span className="text-xs text-muted-foreground/60">·</span>
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">

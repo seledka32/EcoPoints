@@ -6,6 +6,7 @@ import { Trophy, Medal, Crown, Star, Recycle, Wind } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { Spinner } from '@/components/ui/spinner'
 import { RANKS, type RankKey } from '@/lib/ranks'
+import { useLanguage } from '@/hooks/use-language'
 
 interface LeaderboardEntry {
   position: number
@@ -33,10 +34,10 @@ interface LeaderboardContentProps {
 type Tab    = 'leaderboard' | 'achievements'
 type Period = 'alltime' | 'month' | 'week'
 
-const PERIODS: { key: Period; label: string; icon: string }[] = [
-  { key: 'alltime', label: 'Всё время', icon: '🏆' },
-  { key: 'month',   label: 'Месяц',     icon: '📅' },
-  { key: 'week',    label: 'Неделя',    icon: '⚡' },
+const PERIOD_KEYS: { key: Period; tKey: string; icon: string }[] = [
+  { key: 'alltime', tKey: 'period-alltime', icon: '🏆' },
+  { key: 'month',   tKey: 'period-month',   icon: '📅' },
+  { key: 'week',    tKey: 'period-week',    icon: '⚡' },
 ]
 
 function getRankMeta(key: RankKey) {
@@ -101,10 +102,12 @@ function PodiumCard({
   entry,
   place,
   isCurrentUser,
+  t,
 }: {
   entry: LeaderboardEntry
   place: 1 | 2 | 3
   isCurrentUser: boolean
+  t: (k: string) => string
 }) {
   const configs = {
     1: { icon: Crown,  iconColor: 'text-yellow-400', border: 'border-yellow-400/40', glow: 'shadow-yellow-500/20', badge: '👑', mt: 'mt-0',   avatarSize: 'lg' as const },
@@ -125,12 +128,12 @@ function PodiumCard({
       <div className="w-full text-center">
         <p className={`truncate text-xs font-semibold ${isCurrentUser ? 'text-emerald-400' : 'text-foreground'}`}>
           {entry.displayName}
-          {isCurrentUser && <span className="ml-1 text-emerald-500">(вы)</span>}
+          {isCurrentUser && <span className="ml-1 text-emerald-500">{t('you-suffix')}</span>}
         </p>
         <p className="mt-0.5 text-sm font-bold tabular-nums text-foreground">
-          {entry.points.toLocaleString('ru-RU')}
+          {entry.points.toLocaleString()}
         </p>
-        <p className="text-[9px] text-muted-foreground">баллов</p>
+        <p className="text-[9px] text-muted-foreground">{t('pts-sub')}</p>
       </div>
       <RankBadge rankKey={entry.rank} />
     </div>
@@ -139,79 +142,72 @@ function PodiumCard({
 
 /* ── Achievements tab ── */
 const ACHIEVEMENTS = [
-  { key: 'first',     emoji: '🌱', label: 'Первый шаг',   desc: 'Первая сдача',       check: (p: AchProps) => p.transactionCount > 0     },
-  { key: 'recycler',  emoji: '♻️', label: 'Переработчик', desc: '1 кг отходов',        check: (p: AchProps) => p.kgRecycled >= 1           },
-  { key: 'collector', emoji: '⭐', label: 'Коллекционер', desc: '100 баллов',          check: (p: AchProps) => p.totalEarned >= 100        },
-  { key: 'activist',  emoji: '🌿', label: 'Эко-активист', desc: '10 кг отходов',       check: (p: AchProps) => p.kgRecycled >= 10          },
-  { key: 'expert',    emoji: '💎', label: 'Эко-профи',    desc: '1000 баллов',         check: (p: AchProps) => p.totalEarned >= 1000       },
-  { key: 'guardian',  emoji: '🌍', label: 'Хранитель',    desc: '100 кг отходов',      check: (p: AchProps) => p.kgRecycled >= 100         },
+  { key: 'first',     emoji: '🌱', labelKey: 'ach-first-label',     descKey: 'ach-first-desc',     check: (p: AchProps) => p.transactionCount > 0 },
+  { key: 'recycler',  emoji: '♻️', labelKey: 'ach-recycler-label',  descKey: 'ach-recycler-desc',  check: (p: AchProps) => p.kgRecycled >= 1      },
+  { key: 'collector', emoji: '⭐', labelKey: 'ach-collector-label', descKey: 'ach-collector-desc', check: (p: AchProps) => p.totalEarned >= 100   },
+  { key: 'activist',  emoji: '🌿', labelKey: 'ach-activist-label',  descKey: 'ach-activist-desc',  check: (p: AchProps) => p.kgRecycled >= 10     },
+  { key: 'expert',    emoji: '💎', labelKey: 'ach-expert-label',    descKey: 'ach-expert-desc',    check: (p: AchProps) => p.totalEarned >= 1000  },
+  { key: 'guardian',  emoji: '🌍', labelKey: 'ach-guardian-label',  descKey: 'ach-guardian-desc',  check: (p: AchProps) => p.kgRecycled >= 100    },
 ]
 
 interface AchProps { transactionCount: number; kgRecycled: number; totalEarned: number }
 
-function AchievementsTab(props: AchProps) {
+function AchievementsTab(props: AchProps & { t: (k: string) => string }) {
+  const { t } = props
   const items = ACHIEVEMENTS.map((a) => ({ ...a, unlocked: a.check(props) }))
   const unlocked = items.filter((a) => a.unlocked).length
   const pct = Math.round((unlocked / items.length) * 100)
 
   return (
     <div className="space-y-4">
-      {/* Progress summary */}
       <div className="rounded-2xl border border-border bg-card p-4">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-semibold text-foreground">Мои достижения</p>
+          <p className="text-sm font-semibold text-foreground">{t('my-achievements')}</p>
           <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">
             {unlocked} / {items.length}
           </span>
         </div>
         <div className="mb-3 h-2.5 w-full overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-700"
-            style={{ width: `${pct}%` }}
-          />
+          <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-700" style={{ width: `${pct}%` }} />
         </div>
-        {/* Stats row */}
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-xl bg-muted/40 p-2">
             <Star className="mx-auto mb-0.5 h-3.5 w-3.5 text-yellow-400" />
-            <p className="text-sm font-bold tabular-nums text-foreground">{props.totalEarned.toLocaleString('ru-RU')}</p>
-            <p className="text-[10px] text-muted-foreground">баллов</p>
+            <p className="text-sm font-bold tabular-nums text-foreground">{props.totalEarned.toLocaleString()}</p>
+            <p className="text-[10px] text-muted-foreground">{t('pts-sub')}</p>
           </div>
           <div className="rounded-xl bg-muted/40 p-2">
             <Recycle className="mx-auto mb-0.5 h-3.5 w-3.5 text-emerald-400" />
             <p className="text-sm font-bold tabular-nums text-foreground">{props.kgRecycled > 0 ? `${props.kgRecycled}` : props.transactionCount}</p>
-            <p className="text-[10px] text-muted-foreground">{props.kgRecycled > 0 ? 'кг сдано' : 'сдач'}</p>
+            <p className="text-[10px] text-muted-foreground">{props.kgRecycled > 0 ? t('kg-recycled-sub') : t('submissions-sub')}</p>
           </div>
           <div className="rounded-xl bg-muted/40 p-2">
             <Wind className="mx-auto mb-0.5 h-3.5 w-3.5 text-cyan-400" />
             <p className="text-sm font-bold tabular-nums text-foreground">
               {props.kgRecycled > 0 ? `~${Math.round(props.kgRecycled * 2.5)}` : '—'}
             </p>
-            <p className="text-[10px] text-muted-foreground">кг CO₂</p>
+            <p className="text-[10px] text-muted-foreground">{t('co2-sub')}</p>
           </div>
         </div>
       </div>
 
-      {/* Achievements grid */}
       <div className="grid grid-cols-2 gap-3">
         {items.map((a) => (
           <div
             key={a.key}
             className={`flex items-center gap-3 rounded-2xl border p-3 transition-all ${
-              a.unlocked
-                ? 'border-emerald-500/25 bg-emerald-500/5'
-                : 'border-border bg-card opacity-45'
+              a.unlocked ? 'border-emerald-500/25 bg-emerald-500/5' : 'border-border bg-card opacity-45'
             }`}
           >
             <span className="text-2xl leading-none">{a.unlocked ? a.emoji : '🔒'}</span>
             <div className="min-w-0">
               <p className={`text-sm font-semibold leading-tight ${a.unlocked ? 'text-foreground' : 'text-muted-foreground'}`}>
-                {a.label}
+                {t(a.labelKey)}
               </p>
-              <p className="text-xs text-muted-foreground">{a.desc}</p>
+              <p className="text-xs text-muted-foreground">{t(a.descKey)}</p>
               {a.unlocked && (
                 <span className="mt-1 inline-block rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-400">
-                  ✓ Разблокировано
+                  {t('ach-unlocked')}
                 </span>
               )}
             </div>
@@ -230,6 +226,7 @@ export function LeaderboardContent({
   transactionCount,
   totalEarned,
 }: LeaderboardContentProps) {
+  const { t } = useLanguage()
   const [tab, setTab]       = useState<Tab>('leaderboard')
   const [period, setPeriod] = useState<Period>('alltime')
   const [data, setData]     = useState<LeaderboardData | null>(null)
@@ -271,15 +268,15 @@ export function LeaderboardContent({
                 <Trophy className="h-6 w-6 text-yellow-400" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-foreground">Таблица лидеров</h1>
-                <p className="text-xs text-muted-foreground">Топ эко-активистов EcoPoints</p>
+                <h1 className="text-xl font-bold text-foreground">{t('leaderboard-title')}</h1>
+                <p className="text-xs text-muted-foreground">{t('leaderboard-sub')}</p>
               </div>
             </div>
             {myPosition && (
               <div className="text-right">
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">ваше место</p>
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('your-place')}</p>
                 <p className="text-2xl font-bold text-emerald-400">#{myPosition}</p>
-                <p className="text-[10px] text-muted-foreground">{myPoints.toLocaleString('ru-RU')} баллов</p>
+                <p className="text-[10px] text-muted-foreground">{myPoints.toLocaleString()} {t('pts-sub')}</p>
               </div>
             )}
           </div>
@@ -288,19 +285,19 @@ export function LeaderboardContent({
         {/* ── Tab switcher ── */}
         <div className="mb-5 flex gap-2 rounded-2xl border border-border bg-card p-1">
           {([
-            { key: 'leaderboard', label: '🏆 Топ',         tab: 'leaderboard' as Tab },
-            { key: 'achievements', label: '🎖 Достижения', tab: 'achievements' as Tab },
-          ] as const).map((t) => (
+            { key: 'leaderboard', tKey: 'tab-top',          tabVal: 'leaderboard' as Tab },
+            { key: 'achievements', tKey: 'tab-achievements', tabVal: 'achievements' as Tab },
+          ] as const).map((item) => (
             <button
-              key={t.key}
-              onClick={() => setTab(t.tab)}
+              key={item.key}
+              onClick={() => setTab(item.tabVal)}
               className={`flex-1 rounded-xl py-2 text-sm font-semibold transition-all ${
-                tab === t.tab
+                tab === item.tabVal
                   ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              {t.label}
+              {t(item.tKey)}
             </button>
           ))}
         </div>
@@ -310,12 +307,13 @@ export function LeaderboardContent({
             transactionCount={transactionCount}
             kgRecycled={kgRecycled}
             totalEarned={totalEarned}
+            t={t}
           />
         ) : (
           <>
             {/* ── Period tabs ── */}
             <div className="mb-5 flex gap-2">
-              {PERIODS.map((p) => (
+              {PERIOD_KEYS.map((p) => (
                 <button
                   key={p.key}
                   onClick={() => setPeriod(p.key)}
@@ -326,7 +324,7 @@ export function LeaderboardContent({
                   }`}
                 >
                   <span>{p.icon}</span>
-                  {p.label}
+                  {t(p.tKey)}
                 </button>
               ))}
             </div>
@@ -341,9 +339,9 @@ export function LeaderboardContent({
                 {/* ── Top 3 podium ── */}
                 {hasTop3 && (
                   <div className="mb-2 flex items-end gap-2">
-                    <PodiumCard entry={data!.top20[1]} place={2} isCurrentUser={data!.top20[1].isCurrentUser} />
-                    <PodiumCard entry={data!.top20[0]} place={1} isCurrentUser={data!.top20[0].isCurrentUser} />
-                    <PodiumCard entry={data!.top20[2]} place={3} isCurrentUser={data!.top20[2].isCurrentUser} />
+                    <PodiumCard entry={data!.top20[1]} place={2} isCurrentUser={data!.top20[1].isCurrentUser} t={t} />
+                    <PodiumCard entry={data!.top20[0]} place={1} isCurrentUser={data!.top20[0].isCurrentUser} t={t} />
+                    <PodiumCard entry={data!.top20[2]} place={3} isCurrentUser={data!.top20[2].isCurrentUser} t={t} />
                   </div>
                 )}
 
@@ -383,7 +381,7 @@ export function LeaderboardContent({
                           <div className="relative min-w-0 flex-1">
                             <p className={`truncate text-sm font-semibold ${entry.isCurrentUser ? 'text-emerald-400' : 'text-foreground'}`}>
                               {entry.displayName}
-                              {entry.isCurrentUser && <span className="ml-1 text-xs font-normal text-emerald-500">(вы)</span>}
+                              {entry.isCurrentUser && <span className="ml-1 text-xs font-normal text-emerald-500">{t('you-suffix')}</span>}
                             </p>
                             <RankBadge rankKey={entry.rank} />
                           </div>
@@ -391,9 +389,9 @@ export function LeaderboardContent({
                           {/* Points */}
                           <div className="relative shrink-0 text-right">
                             <span className="text-sm font-bold tabular-nums text-foreground">
-                              {entry.points.toLocaleString('ru-RU')}
+                              {entry.points.toLocaleString()}
                             </span>
-                            <p className="text-[10px] text-muted-foreground">баллов</p>
+                            <p className="text-[10px] text-muted-foreground">{t('pts-sub')}</p>
                           </div>
                         </div>
                       )
@@ -406,7 +404,7 @@ export function LeaderboardContent({
                   <>
                     <div className="flex items-center gap-3">
                       <div className="flex-1 border-t border-dashed border-border" />
-                      <span className="text-xs text-muted-foreground">ваше место</span>
+                      <span className="text-xs text-muted-foreground">{t('your-place')}</span>
                       <div className="flex-1 border-t border-dashed border-border" />
                     </div>
                     <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/40 bg-emerald-500/5 px-4 py-3">
@@ -417,15 +415,15 @@ export function LeaderboardContent({
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-emerald-400">
                           {data.currentUser.displayName}
-                          <span className="ml-1 text-xs font-normal text-emerald-500">(вы)</span>
+                          <span className="ml-1 text-xs font-normal text-emerald-500">{t('you-suffix')}</span>
                         </p>
                         <RankBadge rankKey={data.currentUser.rank} />
                       </div>
                       <div className="shrink-0 text-right">
                         <span className="text-sm font-bold tabular-nums text-foreground">
-                          {data.currentUser.points.toLocaleString('ru-RU')}
+                          {data.currentUser.points.toLocaleString()}
                         </span>
-                        <p className="text-[10px] text-muted-foreground">баллов</p>
+                        <p className="text-[10px] text-muted-foreground">{t('pts-sub')}</p>
                       </div>
                     </div>
                   </>
@@ -435,10 +433,8 @@ export function LeaderboardContent({
                 {(data?.top20.length ?? 0) === 0 && (
                   <div className="rounded-2xl border border-border bg-card py-16 text-center">
                     <Trophy className="mx-auto mb-3 h-10 w-10 text-muted-foreground/20" />
-                    <p className="text-sm text-muted-foreground">Нет данных за этот период</p>
-                    <p className="mt-1 text-xs text-muted-foreground/60">
-                      Сдайте отходы, чтобы попасть в рейтинг!
-                    </p>
+                    <p className="text-sm text-muted-foreground">{t('no-period-data')}</p>
+                    <p className="mt-1 text-xs text-muted-foreground/60">{t('recycle-to-rank')}</p>
                   </div>
                 )}
               </div>

@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { RANKS, getRankProgress, type RankKey } from '@/lib/ranks'
+import { useLanguage } from '@/hooks/use-language'
 import { toast } from 'sonner'
 
 interface ProfileData {
@@ -73,6 +74,7 @@ export function ProfileContent({
   transactionCount,
 }: ProfileContentProps) {
   const router = useRouter()
+  const { t } = useLanguage()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [profile, setProfile]       = useState<ProfileData | null>(null)
@@ -103,11 +105,11 @@ export function ProfileContent({
         body: JSON.stringify({ displayName: nameInput.trim() }),
       })
       const data = (await res.json()) as { ok?: boolean; displayName?: string; error?: string }
-      if (!res.ok) { toast.error(data.error ?? 'Ошибка сохранения'); return }
+      if (!res.ok) { toast.error(data.error ?? t('auth-error-generic')); return }
       setProfile((p) => p ? { ...p, displayName: data.displayName ?? nameInput.trim() } : p)
       setEditing(false)
-      toast.success('Имя обновлено')
-    } catch { toast.error('Ошибка сети') }
+      toast.success(t('name-saved'))
+    } catch { toast.error(t('auth-error-generic')) }
     finally { setSaving(false) }
   }
 
@@ -118,11 +120,11 @@ export function ProfileContent({
     if (!file) return
 
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('Файл слишком большой. Максимум 10 МБ.')
+      toast.error(t('avatar-too-large') || 'File too large. Max 10 MB.')
       return
     }
     if (!file.type.startsWith('image/')) {
-      toast.error('Выберите изображение')
+      toast.error(t('select-image') || 'Select an image')
       return
     }
 
@@ -134,11 +136,11 @@ export function ProfileContent({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ avatarUrl: base64 }),
       })
-      if (!res.ok) { toast.error('Ошибка загрузки'); return }
+      if (!res.ok) { toast.error(t('auth-error-generic')); return }
       setProfile((p) => p ? { ...p, avatarUrl: base64 } : p)
       try { sessionStorage.setItem('eco-user-avatar', base64) } catch { /* ssr */ }
-      toast.success('Аватар обновлён')
-    } catch { toast.error('Не удалось обработать изображение') }
+      toast.success(t('avatar-saved'))
+    } catch { toast.error(t('auth-error-generic')) }
     finally { setAvatarUploading(false) }
   }
 
@@ -150,11 +152,11 @@ export function ProfileContent({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ avatarUrl: null }),
       })
-      if (!res.ok) { toast.error('Ошибка'); return }
+      if (!res.ok) { toast.error(t('auth-error-generic')); return }
       setProfile((p) => p ? { ...p, avatarUrl: null } : p)
       try { sessionStorage.setItem('eco-user-avatar', '') } catch { /* ssr */ }
-      toast.success('Аватар удалён')
-    } catch { toast.error('Ошибка сети') }
+      toast.success(t('avatar-removed'))
+    } catch { toast.error(t('auth-error-generic')) }
     finally { setAvatarUploading(false) }
   }
 
@@ -187,12 +189,12 @@ export function ProfileContent({
     displayName[0]?.toUpperCase() || '?'
 
   const achievements = [
-    { key: 'first',     emoji: '🌱', label: 'Первый шаг',   desc: 'Первая сдача',         unlocked: transactionCount > 0     },
-    { key: 'recycler',  emoji: '♻️', label: 'Переработчик', desc: '1 кг отходов',          unlocked: kgRecycled >= 1           },
-    { key: 'collector', emoji: '⭐', label: 'Коллекционер', desc: '100 баллов',            unlocked: totalPoints >= 100        },
-    { key: 'activist',  emoji: '🌿', label: 'Эко-активист', desc: '10 кг отходов',         unlocked: kgRecycled >= 10          },
-    { key: 'expert',    emoji: '💎', label: 'Эко-профи',    desc: '1000 баллов',           unlocked: totalPoints >= 1000       },
-    { key: 'guardian',  emoji: '🌍', label: 'Хранитель',    desc: '100 кг отходов',        unlocked: kgRecycled >= 100         },
+    { key: 'first',     emoji: '🌱', label: t('ach-first-label'),     desc: t('ach-first-desc'),     unlocked: transactionCount > 0 },
+    { key: 'recycler',  emoji: '♻️', label: t('ach-recycler-label'),  desc: t('ach-recycler-desc'),  unlocked: kgRecycled >= 1      },
+    { key: 'collector', emoji: '⭐', label: t('ach-collector-label'), desc: t('ach-collector-desc'), unlocked: totalPoints >= 100   },
+    { key: 'activist',  emoji: '🌿', label: t('ach-activist-label'),  desc: t('ach-activist-desc'),  unlocked: kgRecycled >= 10     },
+    { key: 'expert',    emoji: '💎', label: t('ach-expert-label'),    desc: t('ach-expert-desc'),    unlocked: totalPoints >= 1000  },
+    { key: 'guardian',  emoji: '🌍', label: t('ach-guardian-label'),  desc: t('ach-guardian-desc'),  unlocked: kgRecycled >= 100    },
   ]
 
   const unlockedCount    = achievements.filter((a) => a.unlocked).length
@@ -231,7 +233,7 @@ export function ProfileContent({
                     avatarUrl ? '' : `${rankMeta.bg} ${rankMeta.color}`
                   } text-3xl font-bold`}
                   onClick={() => !avatarUploading && fileInputRef.current?.click()}
-                  title="Изменить аватар"
+                  title={t('avatar-change')}
                 >
                   {avatarUrl ? (
                     <Image
@@ -253,7 +255,7 @@ export function ProfileContent({
                     ) : (
                       <>
                         <Camera className="h-5 w-5 text-white" />
-                        <span className="text-[9px] font-semibold text-white">Изменить</span>
+                        <span className="text-[9px] font-semibold text-white">{t('avatar-change')}</span>
                       </>
                     )}
                   </div>
@@ -327,13 +329,13 @@ export function ProfileContent({
             <div className="mt-4 flex items-center justify-between rounded-2xl bg-white/[0.05] px-4 py-3">
               <div className="flex items-center gap-2">
                 <Star className="h-4 w-4 text-yellow-400" />
-                <span className="text-sm text-muted-foreground">Текущий баланс</span>
+                <span className="text-sm text-muted-foreground">{t('sheet-cur-balance')}</span>
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-lg font-bold tabular-nums text-foreground">
-                  {pointsBalance.toLocaleString('ru-RU')}
+                  {pointsBalance.toLocaleString()}
                 </span>
-                <span className="text-xs text-muted-foreground">баллов</span>
+                <span className="text-xs text-muted-foreground">{t('pts-sub')}</span>
               </div>
             </div>
           </div>
@@ -346,19 +348,19 @@ export function ProfileContent({
               <span className="text-2xl">{rankMeta.emoji}</span>
               <div>
                 <p className={`text-base font-bold ${rankMeta.color}`}>{rankMeta.label}</p>
-                <p className="text-xs text-muted-foreground">{totalPoints.toLocaleString('ru-RU')} баллов всего</p>
+                <p className="text-xs text-muted-foreground">{totalPoints.toLocaleString()} {t('pts-total')}</p>
               </div>
             </div>
             {nextRank ? (
               <div className="text-right">
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">следующий</p>
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('next-rank-lbl')}</p>
                 <p className="text-sm font-semibold text-foreground">{nextRank.emoji} {nextRank.label}</p>
                 <p className="text-xs text-muted-foreground">
-                  ещё {(nextRank.minPoints - totalPoints).toLocaleString('ru-RU')} баллов
+                  {t('more-pts').replace('%d', (nextRank.minPoints - totalPoints).toLocaleString())}
                 </p>
               </div>
             ) : (
-              <span className="text-sm font-semibold text-emerald-400">🎉 Макс. ранг!</span>
+              <span className="text-sm font-semibold text-emerald-400">{t('max-rank')}</span>
             )}
           </div>
           {nextRank && (
@@ -381,9 +383,9 @@ export function ProfileContent({
         {/* ── Stats row ── */}
         <div className="mb-4 grid grid-cols-3 gap-3">
           {[
-            { icon: Star,    color: 'text-yellow-400',  bg: 'bg-yellow-500/15',  value: pointsBalance.toLocaleString('ru-RU'),                                         label: 'баллов'                        },
-            { icon: Recycle, color: 'text-emerald-400', bg: 'bg-emerald-500/15', value: kgRecycled > 0 ? `${kgRecycled}` : String(transactionCount),                   label: kgRecycled > 0 ? 'кг сдано' : 'сдач' },
-            { icon: Wind,    color: 'text-cyan-400',    bg: 'bg-cyan-500/15',    value: co2Saved > 0 ? String(co2Saved) : '—',                                          label: 'кг CO₂'                        },
+            { icon: Star,    color: 'text-yellow-400',  bg: 'bg-yellow-500/15',  value: pointsBalance.toLocaleString(),                               label: t('pts-sub')                                        },
+            { icon: Recycle, color: 'text-emerald-400', bg: 'bg-emerald-500/15', value: kgRecycled > 0 ? `${kgRecycled}` : String(transactionCount),  label: kgRecycled > 0 ? t('kg-recycled-sub') : t('submissions-sub') },
+            { icon: Wind,    color: 'text-cyan-400',    bg: 'bg-cyan-500/15',    value: co2Saved > 0 ? String(co2Saved) : '—',                         label: t('co2-sub')                                        },
           ].map(({ icon: Icon, color, bg, value, label }) => (
             <div key={label} className="rounded-2xl border border-border bg-card p-3 text-center">
               <div className={`mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-xl ${bg}`}>
@@ -399,7 +401,7 @@ export function ProfileContent({
         {(kgRecycled > 0 || co2Saved > 0) && (
           <div className="mb-4 rounded-2xl border border-emerald-500/20 bg-gradient-to-r from-emerald-500/5 to-cyan-500/5 p-4">
             <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-emerald-400">
-              🌿 Ваш вклад в природу
+              🌿 {t('eco-impact')}
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="flex items-center gap-3">
@@ -408,7 +410,7 @@ export function ProfileContent({
                 </div>
                 <div>
                   <p className="text-lg font-bold text-foreground">{treesEquivalent > 0 ? `~${treesEquivalent}` : '—'}</p>
-                  <p className="text-xs text-muted-foreground">деревьев (экв.)</p>
+                  <p className="text-xs text-muted-foreground">{t('trees-equiv')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -417,7 +419,7 @@ export function ProfileContent({
                 </div>
                 <div>
                   <p className="text-lg font-bold text-foreground">{kmAvoided > 0 ? `~${kmAvoided}` : '—'}</p>
-                  <p className="text-xs text-muted-foreground">км без авто</p>
+                  <p className="text-xs text-muted-foreground">{t('km-no-car')}</p>
                 </div>
               </div>
             </div>
@@ -426,7 +428,7 @@ export function ProfileContent({
 
         {/* ── Ranks journey ── */}
         <div className="mb-4 rounded-2xl border border-border bg-card p-4">
-          <p className="mb-4 text-sm font-semibold text-foreground">Путь эко-героя</p>
+          <p className="mb-4 text-sm font-semibold text-foreground">{t('eco-path')}</p>
           <div className="relative flex items-center justify-between">
             <div className="absolute left-5 right-5 top-5 h-0.5 bg-border" />
             <div
@@ -465,7 +467,7 @@ export function ProfileContent({
         {/* ── Achievements ── */}
         <div className="mb-4 rounded-2xl border border-border bg-card p-4">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-semibold text-foreground">Достижения</p>
+            <p className="text-sm font-semibold text-foreground">{t('achievements-section')}</p>
             <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">
               {unlockedCount} / {achievements.length}
             </span>
@@ -491,10 +493,10 @@ export function ProfileContent({
         {/* ── Quick actions ── */}
         <div className="mb-4 grid grid-cols-2 gap-3">
           {[
-            { href: '/dashboard/qr',      icon: QrCode, color: 'text-emerald-400', bg: 'bg-emerald-500/15', hoverBorder: 'hover:border-emerald-500/40', hoverBg: 'hover:bg-emerald-500/5', title: 'Мой QR',    sub: 'Показать карту'    },
-            { href: '/dashboard/qr',      icon: Copy,   color: 'text-cyan-400',    bg: 'bg-cyan-500/15',    hoverBorder: 'hover:border-cyan-500/40',    hoverBg: 'hover:bg-cyan-500/5',    title: 'Пригласить', sub: 'Реферальный код'  },
-            { href: '/dashboard/map',     icon: MapPin, color: 'text-blue-400',    bg: 'bg-blue-500/15',    hoverBorder: 'hover:border-blue-500/40',    hoverBg: 'hover:bg-blue-500/5',    title: 'Карта',      sub: 'Пункты приёма'    },
-            { href: '/dashboard/rewards', icon: Gift,   color: 'text-purple-400',  bg: 'bg-purple-500/15',  hoverBorder: 'hover:border-purple-500/40',  hoverBg: 'hover:bg-purple-500/5',  title: 'Награды',    sub: 'Каталог бонусов'  },
+            { href: '/dashboard/qr',      icon: QrCode, color: 'text-emerald-400', bg: 'bg-emerald-500/15', hoverBorder: 'hover:border-emerald-500/40', hoverBg: 'hover:bg-emerald-500/5', title: t('my-qr-btn'),   sub: t('show-card')    },
+            { href: '/dashboard/qr',      icon: Copy,   color: 'text-cyan-400',    bg: 'bg-cyan-500/15',    hoverBorder: 'hover:border-cyan-500/40',    hoverBg: 'hover:bg-cyan-500/5',    title: t('invite-btn'),  sub: t('ref-code')     },
+            { href: '/dashboard/map',     icon: MapPin, color: 'text-blue-400',    bg: 'bg-blue-500/15',    hoverBorder: 'hover:border-blue-500/40',    hoverBg: 'hover:bg-blue-500/5',    title: t('nav-map'),     sub: t('dropoff-pts')  },
+            { href: '/dashboard/rewards', icon: Gift,   color: 'text-purple-400',  bg: 'bg-purple-500/15',  hoverBorder: 'hover:border-purple-500/40',  hoverBg: 'hover:bg-purple-500/5',  title: t('my-rewards'),  sub: t('bonuses-cat')  },
           ].map(({ href, icon: Icon, color, bg, hoverBorder, hoverBg, title, sub }) => (
             <Link
               key={`${href}-${title}`}
@@ -520,7 +522,7 @@ export function ProfileContent({
           className="w-full border-red-500/20 bg-red-500/5 text-red-400 hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300"
         >
           {signingOut ? <Spinner className="mr-2 size-4" /> : <LogOut className="mr-2 h-4 w-4" />}
-          Выйти из аккаунта
+          {t('sign-out-full')}
         </Button>
       </main>
     </div>
