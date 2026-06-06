@@ -127,7 +127,12 @@ export function DashboardRewardsContent({ user, pointsBalance }: DashboardReward
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ rewardKey: confirmReward.nameKey }),
       })
-      const data = (await res.json()) as { ok?: boolean; newBalance?: number; error?: string }
+      const data = (await res.json()) as {
+        ok?: boolean
+        newBalance?: number
+        error?: string
+        redeemedReward?: RedeemedReward
+      }
 
       if (!res.ok) {
         toast.error(data.error ?? t('auth-error-generic'))
@@ -135,11 +140,17 @@ export function DashboardRewardsContent({ user, pointsBalance }: DashboardReward
       }
 
       setBalance(data.newBalance ?? balance - confirmReward.points)
-      setMyRewards(null) // Reset so it re-fetches on next open
-      toast.success(t('get-reward'), {
-        description: t(confirmReward.nameKey),
-        icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
-      })
+
+      if (data.redeemedReward) {
+        setMyRewards((prev) => (prev ? [data.redeemedReward!, ...prev] : [data.redeemedReward!]))
+        setQrReward(data.redeemedReward)
+      } else {
+        setMyRewards(null)
+        toast.success(t('get-reward'), {
+          description: t(confirmReward.nameKey),
+          icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
+        })
+      }
     } catch {
       toast.error(t('auth-error-generic'))
     } finally {

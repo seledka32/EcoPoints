@@ -68,9 +68,10 @@ export async function POST(req: Request) {
   }
 
   const now = new Date()
+  const couponCode = generateCouponCode()
 
   // Record transaction and redeemed reward in parallel
-  await Promise.all([
+  const [, rewardInsert] = await Promise.all([
     db.collection('transactions').insertOne({
       userId: userOid,
       amount: -reward.points,
@@ -84,10 +85,22 @@ export async function POST(req: Request) {
       points: reward.points,
       category: reward.category,
       redeemedAt: now,
-      couponCode: generateCouponCode(),
+      couponCode,
       used: false,
     }),
   ])
 
-  return NextResponse.json({ ok: true, newBalance: pointsResult.balance })
+  return NextResponse.json({
+    ok: true,
+    newBalance: pointsResult.balance,
+    redeemedReward: {
+      id: rewardInsert.insertedId.toString(),
+      rewardKey,
+      points: reward.points,
+      category: reward.category,
+      redeemedAt: now.toISOString(),
+      couponCode,
+      used: false,
+    },
+  })
 }
