@@ -145,13 +145,13 @@ export function DashboardHeader({ user, variant = 'main', rankEmoji, rankLabel }
                 className="border-emerald-500/40 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-500/10"
               >
                 <ShieldCheck className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Админ</span>
+                <span className="hidden sm:inline">{t('admin-badge')}</span>
               </Button>
             </Link>
           )}
 
           {/* User avatar → links to profile */}
-          <Link href="/dashboard/profile" title="Профиль">
+          <Link href="/dashboard/profile" title={t('profile-link-title')}>
             <div className="relative h-8 w-8 overflow-hidden rounded-full border-2 border-border bg-emerald-500/20 transition-opacity hover:opacity-80">
               {avatarUrl ? (
                 <Image

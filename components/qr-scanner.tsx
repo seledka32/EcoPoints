@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Camera, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useLanguage } from '@/hooks/use-language'
 
 interface QrScannerProps {
   onScan: (code: string) => void
@@ -10,10 +11,11 @@ interface QrScannerProps {
 }
 
 export function QrScanner({ onScan, onClose }: QrScannerProps) {
+  const { t } = useLanguage()
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const rafRef = useRef<number | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [errorKey, setErrorKey] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
 
   const handleScan = useCallback(
@@ -45,7 +47,7 @@ export function QrScanner({ onScan, onClose }: QrScannerProps) {
         }
 
         if (!('BarcodeDetector' in window)) {
-          setError('Сканер не поддерживается этим браузером. Введите код вручную.')
+          setErrorKey('scanner-not-supported')
           return
         }
 
@@ -68,7 +70,7 @@ export function QrScanner({ onScan, onClose }: QrScannerProps) {
         }
         rafRef.current = requestAnimationFrame(detect)
       } catch {
-        setError('Не удалось открыть камеру. Проверьте разрешения браузера.')
+        setErrorKey('camera-error')
       }
     }
 
@@ -93,16 +95,16 @@ export function QrScanner({ onScan, onClose }: QrScannerProps) {
         <X className="h-4 w-4" />
       </Button>
 
-      {!ready && !error && (
+      {!ready && !errorKey && (
         <div className="flex h-48 items-center justify-center gap-2 text-sm text-white/70">
           <Camera className="h-5 w-5 animate-pulse" />
-          Открываем камеру...
+          {t('camera-opening')}
         </div>
       )}
 
-      {error && (
+      {errorKey && (
         <div className="flex h-48 items-center justify-center p-4 text-center text-sm text-red-400">
-          {error}
+          {t(errorKey)}
         </div>
       )}
 

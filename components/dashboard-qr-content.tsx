@@ -8,6 +8,11 @@ import { QrCode, Star, Gift, Copy, Check } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { useLanguage } from '@/hooks/use-language'
 
+const LOCALE_MAP: Record<string, string> = {
+  en: 'en-US', ru: 'ru-RU', ky: 'ru-RU',
+  ko: 'ko-KR', es: 'es-ES', fr: 'fr-FR', de: 'de-DE', ja: 'ja-JP',
+}
+
 interface DashboardQrContentProps {
   user: { id: string; email?: string | null; role?: string }
   baseUrl: string
@@ -21,7 +26,8 @@ export function DashboardQrContent({
   pointsBalance,
   shortCode,
 }: DashboardQrContentProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
+  const locale = LOCALE_MAP[language] ?? 'en-US'
   const [copied, setCopied] = useState(false)
 
   const inviteSlug = user.id.slice(0, 8).toUpperCase()
@@ -64,13 +70,13 @@ export function DashboardQrContent({
               <div>
                 <p className="text-sm text-muted-foreground">{t('balance')}</p>
                 <p className="text-3xl font-bold tabular-nums text-foreground sm:text-4xl">
-                  {pointsBalance.toLocaleString('ru-RU')}
+                  {pointsBalance.toLocaleString(locale)}
                 </p>
                 <p className="text-sm text-emerald-500">{t('points-available')}</p>
               </div>
             </div>
             <p className="max-w-xs text-xs text-muted-foreground sm:text-sm">
-              Покажите QR-код или быстрый код оператору для начисления баллов
+              {t('qr-operator-desc')}
             </p>
           </div>
         </div>
@@ -93,7 +99,7 @@ export function DashboardQrContent({
                 {/* Короткий код */}
                 <div className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
                   <p className="mb-1 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Быстрый код
+                    {t('quick-code')}
                   </p>
                   <div className="flex items-center justify-center gap-3">
                     <span className="font-mono text-3xl font-bold tracking-[0.2em] text-foreground">
@@ -112,13 +118,13 @@ export function DashboardQrContent({
                     </button>
                   </div>
                   <p className="mt-2 text-center text-xs text-muted-foreground">
-                    Продиктуйте код оператору
+                    {t('dictate-to-operator')}
                   </p>
                 </div>
               </>
             ) : (
               <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-border">
-                <p className="text-sm text-muted-foreground">Код недоступен. Обратитесь в поддержку.</p>
+                <p className="text-sm text-muted-foreground">{t('code-unavailable')}</p>
               </div>
             )}
           </div>

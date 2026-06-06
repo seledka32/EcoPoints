@@ -78,8 +78,14 @@ function formatDate(dateStr: string, lang: string) {
   })
 }
 
+const LOCALE_MAP: Record<string, string> = {
+  en: 'en-US', ru: 'ru-RU', ky: 'ru-RU',
+  ko: 'ko-KR', es: 'es-ES', fr: 'fr-FR', de: 'de-DE', ja: 'ja-JP',
+}
+
 export function DashboardRewardsContent({ user, pointsBalance }: DashboardRewardsContentProps) {
   const { t, language } = useLanguage()
+  const locale = LOCALE_MAP[language] ?? 'en-US'
 
   const [balance, setBalance] = useState(pointsBalance)
   const [activeTab, setActiveTab] = useState<TabKey>('catalog')
@@ -124,7 +130,7 @@ export function DashboardRewardsContent({ user, pointsBalance }: DashboardReward
       const data = (await res.json()) as { ok?: boolean; newBalance?: number; error?: string }
 
       if (!res.ok) {
-        toast.error(data.error ?? 'Произошла ошибка')
+        toast.error(data.error ?? t('auth-error-generic'))
         return
       }
 
@@ -135,7 +141,7 @@ export function DashboardRewardsContent({ user, pointsBalance }: DashboardReward
         icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
       })
     } catch {
-      toast.error('Произошла ошибка')
+      toast.error(t('auth-error-generic'))
     } finally {
       setRedeeming(false)
       setConfirmReward(null)
@@ -159,7 +165,7 @@ export function DashboardRewardsContent({ user, pointsBalance }: DashboardReward
           <p className="text-muted-foreground">
             {t('your-balance')}:{' '}
             <span className="font-semibold text-emerald-500">
-              {balance.toLocaleString('ru-RU')} {t('points-word')}
+              {balance.toLocaleString(locale)} {t('points-word')}
             </span>
           </p>
         </div>
@@ -234,7 +240,7 @@ export function DashboardRewardsContent({ user, pointsBalance }: DashboardReward
 
                     <div className="flex items-center justify-between">
                       <span className={`text-lg font-bold ${canAfford ? 'text-emerald-500' : 'text-muted-foreground'}`}>
-                        {reward.points.toLocaleString('ru-RU')} {t('points-word')}
+                        {reward.points.toLocaleString(locale)} {t('points-word')}
                       </span>
                       <Button
                         size="sm"
@@ -317,7 +323,7 @@ export function DashboardRewardsContent({ user, pointsBalance }: DashboardReward
 
                       <div className="mt-2 flex items-center justify-between gap-2">
                         <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400">
-                          −{r.points.toLocaleString('ru-RU')} {t('spent')}
+                          −{r.points.toLocaleString(locale)} {t('spent')}
                         </span>
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Clock className="h-3 w-3" />
@@ -328,9 +334,9 @@ export function DashboardRewardsContent({ user, pointsBalance }: DashboardReward
                       {r.couponCode && (
                         <div className="mt-2 flex items-center gap-1">
                           {r.used ? (
-                            <span className="text-xs text-muted-foreground">Использован</span>
+                            <span className="text-xs text-muted-foreground">{t('coupon-used')}</span>
                           ) : (
-                            <span className="text-xs font-medium text-emerald-500">Нажмите для QR-кода →</span>
+                            <span className="text-xs font-medium text-emerald-500">{t('tap-for-qr')}</span>
                           )}
                         </div>
                       )}
@@ -364,7 +370,7 @@ export function DashboardRewardsContent({ user, pointsBalance }: DashboardReward
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted/40">
                     <X className="h-8 w-8 text-muted-foreground" />
                   </div>
-                  <p className="text-base font-semibold text-muted-foreground">Купон использован</p>
+                  <p className="text-base font-semibold text-muted-foreground">{t('coupon-used-status')}</p>
                 </div>
               ) : (
                 <>
@@ -376,16 +382,16 @@ export function DashboardRewardsContent({ user, pointsBalance }: DashboardReward
                       {qrReward.couponCode}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Покажите этот код в заведении
+                      {t('show-code-at-venue')}
                     </p>
                   </div>
                   <div className="w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-center">
-                    <p className="text-xs text-muted-foreground">Стоимость купона</p>
+                    <p className="text-xs text-muted-foreground">{t('coupon-value')}</p>
                     <p className="mt-0.5 text-lg font-bold text-foreground">
-                      {qrReward.points.toLocaleString('ru-RU')} {t('points-word')}
+                      {qrReward.points.toLocaleString(locale)} {t('points-word')}
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      Получен {formatDate(qrReward.redeemedAt, language)}
+                      {t('redeemed-on')} {formatDate(qrReward.redeemedAt, language)}
                     </p>
                   </div>
                 </>
@@ -418,7 +424,7 @@ export function DashboardRewardsContent({ user, pointsBalance }: DashboardReward
                 <p className="text-sm text-muted-foreground">
                   {t('will-deduct')}{' '}
                   <span className="font-semibold text-red-400">
-                    {confirmReward?.points.toLocaleString('ru-RU')} {t('points-word')}
+                    {confirmReward?.points.toLocaleString(locale)} {t('points-word')}
                   </span>
                 </p>
               </div>
